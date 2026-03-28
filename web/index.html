@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AegisSpeak — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence." />
+  <title>AegisSpeak · AI Mental Health Copilot</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+</head>
+<body>
+
+<div class="ambient-bg"></div>
+
+<div class="app-shell">
+
+  <!-- ═══ Sidebar ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <a class="sidebar-logo" href="#">
+        <div class="logo-icon">🛡️</div>
+        <div>
+          <div class="logo-text">AegisSpeak</div>
+          <div class="logo-sub">Mental Health Companion</div>
+        </div>
+      </a>
+      <div class="ux-mode-toggle" id="ux-mode-toggle" aria-label="User experience mode">
+        <button class="mode-btn active" data-mode="calm" id="btn-mode-calm" type="button">Calm</button>
+        <button class="mode-btn" data-mode="full" id="btn-mode-full" type="button">Full</button>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Wellness</div>
+      <a class="nav-item active" data-screen="dashboard" href="#">
+        <span class="nav-icon">◎</span><span class="nav-label">Home</span>
+      </a>
+      <a class="nav-item" data-screen="copilot" href="#">
+        <span class="nav-icon">◉</span><span class="nav-label">Talk to AI</span>
+      </a>
+      <a class="nav-item" data-screen="checkin" href="#">
+        <span class="nav-icon">◌</span><span class="nav-label">Daily Check-In</span>
+      </a>
+      <a class="nav-item" data-screen="career" href="#">
+        <span class="nav-icon">🧭</span><span class="nav-label">Career Compass</span>
+      </a>
+      <a class="nav-item" data-screen="support" href="#">
+        <span class="nav-icon">🤝</span><span class="nav-label">Early Support</span>
+      </a>
+      <a class="nav-item" data-screen="community" href="#">
+        <span class="nav-icon">💬</span><span class="nav-label">Community</span>
+      </a>
+      <a class="nav-item" data-screen="vault" href="#">
+        <span class="nav-icon">📚</span><span class="nav-label">Learn & Grow</span>
+      </a>
+      <a class="nav-item" data-screen="milestones" href="#">
+        <span class="nav-icon">🏆</span><span class="nav-label">My Journey</span>
+      </a>
+
+      <div class="nav-section-label full-only">Advanced</div>
+      <a class="nav-item full-only" data-screen="voice" href="#">
+        <span class="nav-icon">🎤</span><span class="nav-label">Voice Lab</span>
+      </a>
+      <a class="nav-item full-only" data-screen="signals" href="#">
+        <span class="nav-icon">📡</span><span class="nav-label">Signals</span>
+      </a>
+      <a class="nav-item full-only" data-screen="screening" href="#">
+        <span class="nav-icon">📝</span><span class="nav-label">Screening</span>
+      </a>
+      <a class="nav-item full-only" data-screen="insights" href="#">
+        <span class="nav-icon">🔮</span><span class="nav-label">Insights</span>
+      </a>
+
+      <div class="nav-section-label full-only">Provider</div>
+      <a class="nav-item full-only" data-screen="clinician" href="#">
+        <span class="nav-icon">🏥</span><span class="nav-label">Clinician</span>
+      </a>
+      <a class="nav-item full-only" data-screen="triage" href="#">
+        <span class="nav-icon">🚦</span><span class="nav-label">Triage List</span>
+      </a>
+      <a class="nav-item full-only" data-screen="alerts" href="#">
+        <span class="nav-icon">🚨</span><span class="nav-label">Alerts</span>
+      </a>
+      <a class="nav-item full-only" data-screen="compliance" href="#">
+        <span class="nav-icon">✅</span><span class="nav-label">Compliance</span>
+      </a>
+
+      <div class="nav-section-label full-only">System</div>
+      <a class="nav-item full-only" data-screen="privacy" href="#">
+        <span class="nav-icon">🔒</span><span class="nav-label">Privacy & Security</span>
+      </a>
+      <a class="nav-item full-only" data-screen="wipelog" href="#">
+        <span class="nav-icon">🗑️</span><span class="nav-label">Wipe Log</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div id="calm-mode-notice" class="calm-notice">WHO-aligned Calm UX: reduced choices and lower cognitive load.</div>
+      HIPAA · GDPR Compliant<br/>Ephemeral Edge Processing
+      <div style="margin-top:8px;font-size:10px;opacity:0.6;">Press number keys to switch tabs</div>
+    </div>
+  </aside>
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="main-content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="hero-banner">
+        <div class="hero-top">
+          <div>
+            <div class="hero-greeting">Good afternoon</div>
+            <h1 class="hero-title">AegisSpeak Dashboard</h1>
+            <p class="hero-subtitle">Predictive, personalized, privacy-first care</p>
+          </div>
+          <div class="hero-live-badge"><span class="live-dot"></span> Edge Processing Active</div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="stat-label">Stability</div>
+            <div class="stat-value accent" id="dash-stability">68</div>
+            <div class="stat-change flat">/ 100</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-label">Live Stress</div>
+            <div class="stat-value warning" id="dash-stress">32%</div>
+            <div class="stat-change down">↓ monitoring</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-label">Companion XP</div>
+            <div class="stat-value success" id="dash-xp">18</div>
+            <div class="stat-change flat">🌱 Sprout</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-label">Risk Level</div>
+            <div class="stat-value" id="dash-risk-label" style="color:var(--success)">LOW</div>
+            <div class="stat-change flat" id="dash-risk-score">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Mood Quick Check-in -->
+      <div class="glass-card mb-24">
+        <div class="card-title">How are you feeling right now?</div>
+        <div class="card-subtitle">Quick mood check-in — tap to record</div>
+        <div class="mood-quick-row" id="mood-quick-row">
+          <button class="mood-quick-btn" data-mood="1" aria-label="Very Bad"><span class="mood-emoji">😣</span><span class="mood-label">Awful</span></button>
+          <button class="mood-quick-btn" data-mood="3" aria-label="Bad"><span class="mood-emoji">😞</span><span class="mood-label">Low</span></button>
+          <button class="mood-quick-btn" data-mood="5" aria-label="Okay"><span class="mood-emoji">😐</span><span class="mood-label">Okay</span></button>
+          <button class="mood-quick-btn" data-mood="7" aria-label="Good"><span class="mood-emoji">😊</span><span class="mood-label">Good</span></button>
+          <button class="mood-quick-btn" data-mood="9" aria-label="Great"><span class="mood-emoji">🤩</span><span class="mood-label">Great</span></button>
+        </div>
+      </div>
+
+      <!-- Today's Goals -->
+      <div class="glass-card mb-24">
+        <div class="card-title">Today's Goals</div>
+        <div class="card-subtitle">Personalized daily wellness objectives</div>
+        <div id="todays-goals"></div>
+      </div>
+
+      <div class="grid-2-1 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Mood Timeline</div>
+          <div class="card-subtitle">Pattern recognition from recent check-ins</div>
+          <div class="bar-chart" id="dash-mood-chart">
+            <div style="color:var(--text-muted);font-size:13px;padding:40px;text-align:center;width:100%">Complete check-ins to unlock trend visualization</div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Stability Score</div>
+          <div class="card-subtitle">Overall emotional resilience index</div>
+          <div class="stability-ring-wrap">
+            <div class="stability-ring">
+              <svg viewBox="0 0 180 180" width="180" height="180">
+                <circle class="stability-ring-bg" cx="90" cy="90" r="78" />
+                <circle class="stability-ring-fill" id="stability-arc" cx="90" cy="90" r="78"
+                  stroke-dasharray="490" stroke-dashoffset="157" />
+              </svg>
+              <div class="stability-ring-value">
+                <span class="ring-number" id="ring-number">68</span>
+                <span class="ring-label">Stability</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3 gap-24 mb-24">
+        <div class="glass-card intervention-card" onclick="openBreathingModal()">
+          <div class="intervention-icon">🫁</div>
+          <div class="intervention-title">4-4-4 Breathing</div>
+          <div class="intervention-desc">Guided 60-second exercise</div>
+        </div>
+        <div class="glass-card intervention-card" onclick="showToast('🖐 Name 5 see · 4 touch · 3 hear · 2 smell · 1 taste')">
+          <div class="intervention-icon">🖐️</div>
+          <div class="intervention-title">5-4-3-2-1 Grounding</div>
+          <div class="intervention-desc">Sensory awareness exercise</div>
+        </div>
+        <div class="glass-card intervention-card" onclick="showToast('🧠 Write worry → Evidence For → Evidence Against → Balanced Thought')">
+          <div class="intervention-icon">🧠</div>
+          <div class="intervention-title">CBT Thought Reframe</div>
+          <div class="intervention-desc">Cognitive restructuring</div>
+        </div>
+      </div>
+
+      <div class="grid-2 gap-24">
+        <div class="glass-card">
+          <div class="card-title">Context-Aware Recommendations</div>
+          <div class="card-subtitle">Based on time, location & calendar triggers</div>
+          <div id="dash-recommendations">
+            <div class="signal-item"><span class="signal-name">📅 Schedule a 7-min decompression after your next meeting block.</span></div>
+            <div class="signal-item"><span class="signal-name">🏔 Take a short walk before evening congestion to reset stress.</span></div>
+            <div class="signal-item"><span class="signal-name">✅ Hold your current rhythm — repeat one breathing exercise every 4 hours.</span></div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Emotional Companion</div>
+          <div class="card-subtitle">AI avatar that evolves with your resilience</div>
+          <div class="avatar-display">
+            <div class="avatar-emoji" id="avatar-emoji">🌱</div>
+            <div class="avatar-stage" id="avatar-stage">Sprout</div>
+            <div class="avatar-xp-text">18 / 100 XP</div>
+            <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" id="avatar-xp-bar" style="width:18%"></div></div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Earn XP by completing check-ins & exercises</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COPILOT CHAT ═══ -->
+    <div class="screen" id="screen-copilot">
+      <div class="section-heading">
+        <div><div class="section-title">AI Copilot</div><div class="section-subtitle">Memory-aware CBT companion · Powered by Gemini</div></div>
+      </div>
+      <div class="chip-row">
+        <span class="chip active" data-personality="calm">🧘 Calm</span>
+        <span class="chip" data-personality="analytical">🧠 Analytical</span>
+        <span class="chip" data-personality="motivational">🔥 Motivational</span>
+        <span class="chip" data-lang="en">English</span>
+        <span class="chip" data-lang="ne">नेपाली</span>
+        <span class="chip" data-lang="hi">हिन्दी</span>
+      </div>
+      <!-- Privacy Notice -->
+      <div class="chat-privacy-notice mb-16">
+        <span class="chat-privacy-icon">🔒</span>
+        <span>Your conversations are encrypted end-to-end. No raw chat data is stored — only anonymized emotional patterns are retained for your care.</span>
+      </div>
+      <div class="glass-card">
+        <div class="chat-container">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-bubble bot">
+              Hello 👋 I'm your AegisSpeak copilot. Tell me how you're feeling right now, and I'll adapt to your emotional context over time.
+              <div class="chat-bubble-meta">Copilot · Just now</div>
+            </div>
+          </div>
+          <!-- Suggested Prompts -->
+          <div class="chat-suggestions" id="chat-suggestions">
+            <button class="chat-suggestion-btn" onclick="useSuggestion(this)">I'm feeling anxious today</button>
+            <button class="chat-suggestion-btn" onclick="useSuggestion(this)">Help me with a breathing exercise</button>
+            <button class="chat-suggestion-btn" onclick="useSuggestion(this)">I couldn't sleep well last night</button>
+            <button class="chat-suggestion-btn" onclick="useSuggestion(this)">I need to talk about stress at work</button>
+          </div>
+          <div class="chat-input-row">
+            <textarea class="chat-input" id="chat-input" rows="1" placeholder="Tell Copilot how you feel..." aria-label="Chat message input"></textarea>
+            <button class="chat-send-btn" id="chat-send" title="Send" aria-label="Send message">▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CHECK-IN ═══ -->
+    <div class="screen" id="screen-checkin">
+      <div class="section-heading">
+        <div><div class="section-title">Daily Check-In</div><div class="section-subtitle">Active + passive biometric inputs for AI triage</div></div>
+      </div>
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Self-Report</div>
+          <div class="card-subtitle">Daily mood, anxiety, stress & sleep</div>
+          <div class="form-group"><label class="form-label">😊 Mood</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="5" id="sl-mood" /><span class="slider-value" id="sv-mood">5</span></div></div>
+          <div class="form-group"><label class="form-label">😰 Anxiety</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="4" id="sl-anxiety" /><span class="slider-value" id="sv-anxiety">4</span></div></div>
+          <div class="form-group"><label class="form-label">🔥 Stress</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="4" id="sl-stress" /><span class="slider-value" id="sv-stress">4</span></div></div>
+          <div class="form-group"><label class="form-label">😴 Sleep Hours</label><div class="slider-row"><input type="range" class="slider-control" min="0" max="12" value="7" id="sl-sleep" /><span class="slider-value" id="sv-sleep">7</span></div></div>
+          <div class="form-group"><label class="form-label">📱 Phone Usage (hrs)</label><div class="slider-row"><input type="range" class="slider-control" min="0" max="16" value="4" id="sl-phone" /><span class="slider-value" id="sv-phone">4</span></div></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">🎤 Voice Biomarkers</div>
+          <div class="card-subtitle">Acoustic emotion analysis · edge-processed</div>
+          <div class="form-group"><label class="form-label">Speech Rate (WPM)</label><div class="slider-row"><input type="range" class="slider-control" min="60" max="220" value="125" id="sl-wpm" /><span class="slider-value" id="sv-wpm">125</span></div></div>
+          <div class="form-group"><label class="form-label">Pause Ratio</label><div class="slider-row"><input type="range" class="slider-control" min="0" max="100" value="20" id="sl-pause" /><span class="slider-value" id="sv-pause">0.20</span></div></div>
+          <div class="form-group"><label class="form-label">Vocal Jitter</label><div class="slider-row"><input type="range" class="slider-control" min="0" max="200" value="20" id="sl-jitter" /><span class="slider-value" id="sv-jitter">0.02</span></div></div>
+          <div class="form-group"><label class="form-label">Sentiment</label><div class="slider-row"><input type="range" class="slider-control" min="0" max="200" value="100" id="sl-sentiment" /><span class="slider-value" id="sv-sentiment">0.00</span></div></div>
+          <div class="breathing-circle">Breathe</div>
+        </div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Career Pressure & Uncertainty</div>
+        <div class="card-subtitle">Built for students and professionals facing deadlines, role ambiguity, and financial pressure</div>
+        <div class="grid-2 gap-24">
+          <div>
+            <div class="form-group">
+              <label class="form-label" for="career-role">Current Role Context</label>
+              <select id="career-role" class="text-area" style="min-height:48px;resize:none;">
+                <option value="student">Student</option>
+                <option value="professional">Working Professional</option>
+                <option value="job-seeker">Job Seeker</option>
+                <option value="caregiver">Caregiver / Family Earner</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Deadline Load</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="5" id="sl-deadline" /><span class="slider-value" id="sv-deadline">5</span></div></div>
+            <div class="form-group"><label class="form-label">Career Uncertainty</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="5" id="sl-uncertainty" /><span class="slider-value" id="sv-uncertainty">5</span></div></div>
+          </div>
+          <div>
+            <div class="form-group"><label class="form-label">Financial Pressure</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="4" id="sl-financial" /><span class="slider-value" id="sv-financial">4</span></div></div>
+            <div class="form-group"><label class="form-label">Belonging / Social Safety</label><div class="slider-row"><input type="range" class="slider-control" min="1" max="10" value="6" id="sl-belonging" /><span class="slider-value" id="sv-belonging">6</span></div></div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
+                <input type="checkbox" id="stigma-safe" checked />
+                Use stigma-safe language in plans and escalation messages
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="trusted-contact">Trusted Contact (Optional)</label>
+              <input id="trusted-contact" class="text-area" style="min-height:48px;resize:none;" placeholder="e.g., Sister, Mentor, Friend" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">📝 AI-Assisted Journaling</div>
+        <div class="card-subtitle">Write freely · emotional markers auto-detected</div>
+        <textarea class="text-area" id="journal-text" placeholder="Write about how you're feeling today. The AI will detect emotional patterns and suggest CBT actions..."></textarea>
+        <div style="margin-top:16px;display:flex;gap:12px;align-items:center;">
+          <button class="btn btn-primary btn-full" id="btn-checkin">🔬 Run Predictive Analysis</button>
+        </div>
+      </div>
+      <div class="glass-card" id="checkin-result" style="display:none;">
+        <div class="card-title">Analysis Result</div>
+        <div class="card-subtitle">Real-time risk assessment</div>
+        <div id="checkin-result-body"></div>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-danger btn-full" id="btn-emergency">🚨 Trigger Emergency Escalation</button>
+      </div>
+    </div>
+
+    <!-- ═══ CAREER COMPASS ═══ -->
+    <div class="screen" id="screen-career">
+      <div class="section-heading">
+        <div><div class="section-title">Career Compass</div><div class="section-subtitle">Reduce burnout from career pressure with short, practical action plans</div></div>
+      </div>
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Uncertainty Planner</div>
+          <div class="card-subtitle">Convert anxiety into a 72-hour plan</div>
+          <div class="form-group">
+            <label class="form-label" for="career-focus">Current Priority</label>
+            <select id="career-focus" class="text-area" style="min-height:48px;resize:none;">
+              <option value="exams">Exam preparation</option>
+              <option value="job-search">Job search / interviews</option>
+              <option value="performance">Performance pressure</option>
+              <option value="finances">Financial stress</option>
+              <option value="role-clarity">Role clarity / future direction</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="career-concern">What feels hardest right now?</label>
+            <textarea id="career-concern" class="text-area" placeholder="Example: I have deadlines, family expectations, and I am not sure which role to choose."></textarea>
+          </div>
+          <button class="btn btn-primary" id="btn-career-plan">Build 72-Hour Plan</button>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Protective Factors</div>
+          <div class="card-subtitle">Stability anchors we can build into your week</div>
+          <div class="signal-item"><span class="signal-name">🧩 Break big tasks into 25-minute focus sprints</span></div>
+          <div class="signal-item"><span class="signal-name">🤝 Share one weekly stress update with a trusted person</span></div>
+          <div class="signal-item"><span class="signal-name">🛌 Protect sleep before high-stakes decisions</span></div>
+          <div class="signal-item"><span class="signal-name">📉 Track pressure trends, not just mood trends</span></div>
+        </div>
+      </div>
+      <div class="glass-card" id="career-plan-result">
+        <div class="card-title">Action Plan Output</div>
+        <div class="card-subtitle">Your plan will appear here after you click build</div>
+        <div id="career-plan-body" style="color:var(--text-muted);font-size:14px;">No plan generated yet.</div>
+      </div>
+    </div>
+
+    <!-- ═══ EARLY SUPPORT ═══ -->
+    <div class="screen" id="screen-support">
+      <div class="section-heading">
+        <div><div class="section-title">Early Support Pathway</div><div class="section-subtitle">Low-stigma help ladder for conservative communities and family systems</div></div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Support Ladder</div>
+        <div class="card-subtitle">Choose the smallest next step that still moves you toward support</div>
+        <div id="support-step-buttons" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <button class="chip active" data-support-step="self">1. Self-regulation</button>
+          <button class="chip" data-support-step="peer">2. Trusted peer</button>
+          <button class="chip" data-support-step="family">3. Family conversation</button>
+          <button class="chip" data-support-step="counselor">4. Counselor / health post</button>
+          <button class="chip" data-support-step="emergency">5. Emergency safety</button>
+        </div>
+        <div class="grid-2 gap-24" style="margin-bottom:10px;">
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
+              <input type="checkbox" id="support-anonymous" checked />
+              Keep guidance identity-safe and low disclosure
+            </label>
+          </div>
+          <div>
+            <label class="form-label" for="support-language">Preferred Conversation Language</label>
+            <select id="support-language" class="text-area" style="min-height:48px;resize:none;">
+              <option value="en">English</option>
+              <option value="ne">नेपाली</option>
+              <option value="hi">हिन्दी</option>
+            </select>
+          </div>
+        </div>
+        <div class="plan-box">
+          <div class="plan-label">Suggested Script</div>
+          <div class="plan-text" id="support-script-output">Start with Step 1. The app will provide a short, non-alarmist script you can use immediately.</div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="btn-open-copilot-soft">Open This in AI Copilot</button>
+          <button class="btn btn-ghost" id="btn-mark-support-done">Mark Today\'s Support Step Done</button>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">Stigma-Safe Principles</div>
+        <div class="card-subtitle">Language patterns that reduce shame and increase help-seeking</div>
+        <div class="signal-item"><span class="signal-name">Use "stress load" and "wellbeing" if "mental health" feels unsafe in your context.</span></div>
+        <div class="signal-item"><span class="signal-name">Ask for "practical support" first, then discuss emotional support.</span></div>
+        <div class="signal-item"><span class="signal-name">Frame support as strength: "I want to stay stable and productive."</span></div>
+      </div>
+    </div>
+
+    <!-- ═══ VOICE LAB ═══ -->
+    <div class="screen" id="screen-voice">
+      <div class="section-heading"><div><div class="section-title">Voice Lab</div><div class="section-subtitle">Live microphone capture · Speech-to-text · Acoustic biomarker extraction</div></div></div>
+      <div class="glass-card mb-24">
+        <div class="card-title">🎤 Live Voice Capture</div>
+        <div class="card-subtitle">Record your voice — audio is processed locally and immediately purged</div>
+        <div style="text-align:center;padding:20px;">
+          <canvas id="voice-waveform" width="700" height="120" style="width:100%;max-width:700px;border-radius:12px;background:var(--bg-surface);border:1px solid var(--border-glass);"></canvas>
+          <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;align-items:center;">
+            <button class="btn btn-primary" id="btn-voice-start" style="min-width:180px;">🎤 Start Recording</button>
+            <button class="btn btn-danger" id="btn-voice-stop" style="min-width:180px;display:none;">⏹ Stop & Analyze</button>
+          </div>
+          <div id="voice-status" style="margin-top:12px;font-size:13px;color:var(--text-muted);">Press Start to begin real-time voice analysis</div>
+          <div id="voice-timer" style="font-size:32px;font-weight:800;color:var(--accent);margin-top:8px;display:none;">0:00</div>
+        </div>
+      </div>
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Speech Transcription</div>
+          <div class="card-subtitle">Real-time speech-to-text via Web Speech API</div>
+          <div id="voice-transcript" class="text-area" style="min-height:140px;background:var(--bg-surface);border:1px solid var(--border-glass);border-radius:12px;padding:16px;color:var(--text-secondary);font-size:14px;overflow-y:auto;">Transcript will appear here during recording...</div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Extracted Biomarkers</div>
+          <div class="card-subtitle">Acoustic features detected from voice</div>
+          <div class="grid-2" style="gap:10px;">
+            <div class="bio-card"><div class="bio-value" id="vl-wpm">—</div><div class="bio-label">Est. WPM</div></div>
+            <div class="bio-card"><div class="bio-value" id="vl-duration">—</div><div class="bio-label">Duration</div></div>
+            <div class="bio-card"><div class="bio-value" id="vl-volume">—</div><div class="bio-label">Avg Volume</div></div>
+            <div class="bio-card"><div class="bio-value" id="vl-words">—</div><div class="bio-label">Word Count</div></div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:var(--accent-dim);border-radius:10px;text-align:center;">
+            <span style="font-size:12px;color:var(--accent);font-weight:600;">🔒 Audio purged after analysis · Never saved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SIGNALS ═══ -->
+    <div class="screen" id="screen-signals">
+      <div class="section-heading"><div><div class="section-title">Live Signals</div><div class="section-subtitle">Real-time passive & voice biomarker detection</div></div></div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Passive Mood Detection</div>
+        <div class="card-subtitle">Typing speed, phone usage & interaction patterns</div>
+        <div class="signal-item"><div class="signal-dot" style="background:var(--warning)"></div><span class="signal-name">Typing Volatility</span><span class="signal-value" id="sig-typing" style="color:var(--warning)">10%</span></div>
+        <div class="signal-item"><div class="signal-dot" style="background:var(--accent)"></div><span class="signal-name">Interaction Drift</span><span class="signal-value" id="sig-drift" style="color:var(--accent)">10%</span></div>
+        <div class="signal-item"><div class="signal-dot" style="background:var(--success)"></div><span class="signal-name">Live Stress Index</span><span class="signal-value" id="sig-stress" style="color:var(--success)">30%</span></div>
+        <div style="background:var(--accent-dim);border-radius:var(--radius-sm);padding:14px;margin-top:14px;text-align:center;font-weight:600;color:var(--accent);" id="sig-recommendation">📊 Keep monitoring</div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Voice Biomarker Analysis</div>
+        <div class="card-subtitle">Acoustic emotion detection via edge processing</div>
+        <div style="margin-bottom:16px;font-size:15px;">Tone: <strong id="sig-tone" style="color:var(--accent)">🟢 Steady</strong></div>
+        <div class="progress-bar" style="margin-bottom:8px"><div class="progress-fill" id="sig-tension-bar" style="width:25%"></div></div>
+        <div style="font-size:12px;color:var(--text-muted)">Vocal tension index: <span id="sig-tension-val">25</span>% — processed on-device, audio purged</div>
+        <div class="grid-3 gap-24" style="margin-top:20px" id="sig-biomarkers">
+          <div class="bio-card"><div class="bio-value">125</div><div class="bio-unit">words/min</div><div class="bio-label">Speech Rate</div><div class="bio-indicator" style="background:var(--accent)"></div></div>
+          <div class="bio-card"><div class="bio-value">0.20</div><div class="bio-unit">ratio</div><div class="bio-label">Pause Ratio</div><div class="bio-indicator" style="background:var(--success)"></div></div>
+          <div class="bio-card"><div class="bio-value">0.02</div><div class="bio-unit">index</div><div class="bio-label">Vocal Jitter</div><div class="bio-indicator" style="background:var(--success)"></div></div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">Habit & Behavior Tracking</div>
+        <div class="card-subtitle">Sleep, work, and digital health markers</div>
+        <div class="form-group"><div class="form-label">😴 Sleep Hygiene</div><div class="progress-bar"><div class="progress-fill success" id="habit-sleep" style="width:87%"></div></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">87%</div></div>
+        <div class="form-group"><div class="form-label">💼 Workload Balance</div><div class="progress-bar"><div class="progress-fill warning" id="habit-work" style="width:62%"></div></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">62%</div></div>
+        <div class="form-group"><div class="form-label">📱 Digital Overload</div><div class="progress-bar"><div class="progress-fill" id="habit-digital" style="width:76%"></div></div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">76%</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ INSIGHTS ═══ -->
+    <div class="screen" id="screen-insights">
+      <div class="section-heading"><div><div class="section-title">Predictive Insights</div><div class="section-subtitle">Early burnout & depression trend warnings</div></div></div>
+      <div class="grid-3 gap-24 mb-24">
+        <div class="metric-card"><div class="metric-icon">🔥</div><div class="metric-value" id="ins-burnout" style="color:var(--success)">low</div><div class="metric-label">Burnout Risk</div></div>
+        <div class="metric-card"><div class="metric-icon">🌧️</div><div class="metric-value" id="ins-depression" style="color:var(--success)">low</div><div class="metric-label">Depression Risk</div></div>
+        <div class="metric-card"><div class="metric-icon">🎯</div><div class="metric-value" id="ins-confidence" style="color:var(--accent)">0%</div><div class="metric-label">Model Confidence</div></div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">72-Hour Forecast</div>
+        <div class="card-subtitle" id="ins-narrative">Connect to backend for predictive model.</div>
+        <div style="margin-top:12px;font-size:14px;color:var(--text-secondary)">Recommended intervention cadence: <strong style="color:var(--accent)">every 6 hours</strong></div>
+      </div>
+      <div class="grid-2 gap-24">
+        <div class="glass-card">
+          <div class="card-title">Mood Timeline</div>
+          <div class="card-subtitle">Trend visualization from check-ins</div>
+          <div class="bar-chart" id="ins-mood-chart">
+            <div style="color:var(--text-muted);font-size:13px;padding:40px;text-align:center;width:100%">Complete check-ins to unlock visualization</div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Emotional Companion</div>
+          <div class="card-subtitle">Avatar that evolves with your resilience</div>
+          <div class="avatar-display">
+            <div class="avatar-emoji" id="ins-avatar">🌱</div>
+            <div class="avatar-stage" id="ins-stage">Sprout</div>
+            <div class="avatar-xp-text" id="ins-xp-text">18 / 100 XP</div>
+            <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" id="ins-xp-bar" style="width:18%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SCREENING ═══ -->
+    <div class="screen" id="screen-screening">
+      <div class="section-heading"><div><div class="section-title">Clinical Screening</div><div class="section-subtitle">Validated PHQ-9 Depression & GAD-7 Anxiety screening instruments</div></div></div>
+      <div class="glass-card mb-24">
+        <div class="card-title">PHQ-9 · Patient Health Questionnaire</div>
+        <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
+        <div id="phq9-questions"></div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
+          <button class="btn btn-primary" id="btn-score-phq9">Calculate PHQ-9 Score</button>
+          <div id="phq9-result" style="font-size:18px;font-weight:700;"></div>
+        </div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">GAD-7 · Generalized Anxiety Disorder Scale</div>
+        <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
+        <div id="gad7-questions"></div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
+          <button class="btn btn-primary" id="btn-score-gad7">Calculate GAD-7 Score</button>
+          <div id="gad7-result" style="font-size:18px;font-weight:700;"></div>
+        </div>
+      </div>
+      <div class="glass-card" id="screening-summary" style="display:none;">
+        <div class="card-title">Screening Summary</div>
+        <div class="card-subtitle">Combined depression and anxiety assessment</div>
+        <div id="screening-summary-body"></div>
+      </div>
+    </div>
+
+    <!-- ═══ CLINICIAN ═══ -->
+    <div class="screen" id="screen-clinician">
+      <div class="section-heading"><div><div class="section-title">Clinician Dashboard</div><div class="section-subtitle">Remote triage · AI-generated clinical summaries</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" id="btn-export-pdf">📄 Export PDF</button>
+          <button class="btn btn-outline btn-sm" id="btn-export-csv">📊 Export CSV</button>
+          <button class="btn btn-outline btn-sm" id="btn-refresh-clinician">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- Clinician Stats Overview -->
+      <div class="grid-4 gap-24 mb-24" id="clinician-stats">
+        <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-value" style="color:var(--accent)">6</div><div class="metric-label">Active Patients</div></div>
+        <div class="metric-card"><div class="metric-icon">🔴</div><div class="metric-value" style="color:var(--danger)">2</div><div class="metric-label">High Risk</div></div>
+        <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-value" style="color:var(--success)">67%</div><div class="metric-label">Avg Adherence</div></div>
+        <div class="metric-card"><div class="metric-icon">⏱️</div><div class="metric-value" style="color:var(--warning)">12m</div><div class="metric-label">Last Check-in</div></div>
+      </div>
+
+      <!-- Session Summary Card -->
+      <div class="glass-card mb-24">
+        <div class="card-title">AI-Generated Session Summaries</div>
+        <div class="card-subtitle">Latest patient interaction insights synthesized by Gemini</div>
+        <div id="clinician-session-summaries"></div>
+      </div>
+
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Patient Records</div>
+          <div class="card-subtitle">Recent check-in history with risk assessment</div>
+          <div id="clinician-records"><div style="color:var(--text-muted);padding:20px;text-align:center;">No clinical records synced yet.</div></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Adherence Overview</div>
+          <div class="card-subtitle">Patient compliance with prescribed interventions</div>
+          <div id="clinician-adherence"></div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">Latest Clinical Notes</div>
+        <div class="card-subtitle">AI-generated structured summary (RAG-ready)</div>
+        <div id="clinician-summary"><div style="color:var(--text-muted);padding:20px;text-align:center;">Run a patient check-in to generate clinical notes.</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PRIVACY ═══ -->
+    <div class="screen" id="screen-privacy">
+      <div class="section-heading"><div><div class="section-title">Privacy & Security</div><div class="section-subtitle">Zero-trust architecture · on-device processing</div></div></div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Ephemeral Edge Architecture</div>
+        <div class="card-subtitle">Your data never leaves the device in raw form</div>
+        <div class="spec-grid">
+          <div class="spec-item"><div class="spec-icon">🎤</div><div class="spec-label">Raw Audio</div><div class="spec-value">Purged On-Device</div></div>
+          <div class="spec-item"><div class="spec-icon">🧠</div><div class="spec-label">Inference</div><div class="spec-value">Edge-First Processing</div></div>
+          <div class="spec-item"><div class="spec-icon">🔐</div><div class="spec-label">Encryption</div><div class="spec-value">AES-256-GCM</div></div>
+          <div class="spec-item"><div class="spec-icon">📋</div><div class="spec-label">Audit Trail</div><div class="spec-value">SHA-256 Hash Receipt</div></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn btn-outline" id="btn-sms-fallback">📲 Generate SMS/USSD Fallback</button>
+          <button class="btn btn-ghost" onclick="showToast('🎤 Raw audio processed on-device and purged from memory.')">🗑️ Purge Audio Evidence</button>
+        </div>
+        <div id="sms-payload-result" style="display:none;margin-top:16px;" class="record-item">
+          <div class="record-header"><span class="record-date">Encrypted Transport Snapshot</span></div>
+          <div class="record-body" id="sms-payload-body"></div>
+        </div>
+      </div>
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Multi-Language Support</div>
+          <div class="card-subtitle">Localized for low-resource environments</div>
+          <div style="font-size:14px;color:var(--text-secondary);margin-bottom:6px;">🌐 Available: English · नेपाली · हिन्दी</div>
+          <div style="font-size:13px;color:var(--text-muted);">Works offline. Syncs when network returns.</div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Compliance</div>
+          <div class="card-subtitle">Enterprise-grade privacy by design</div>
+          <div style="font-size:14px;color:var(--text-secondary);margin-bottom:6px;">✅ HIPAA Compliant by Design</div>
+          <div style="font-size:14px;color:var(--text-secondary);margin-bottom:6px;">✅ GDPR Data Minimization</div>
+          <div style="font-size:14px;color:var(--text-secondary);">✅ Zero-Knowledge Audit Receipts</div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">Security Audit Log</div>
+        <div class="card-subtitle">Cryptographic compliance proof</div>
+        <div id="privacy-audit-log"><div style="color:var(--text-muted);padding:16px;text-align:center;">No audit entries yet.</div></div>
+        <div style="margin-top:16px;"><div class="card-title" style="font-size:15px;">Escalation Events</div></div>
+        <div id="privacy-escalation-log"><div style="color:var(--text-muted);padding:16px;text-align:center;">No escalation events logged.</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ MILESTONES ═══ -->
+    <div class="screen" id="screen-milestones">
+      <div class="section-heading"><div><div class="section-title">🏆 Milestones & Achievements</div><div class="section-subtitle">Your recovery journey — every step counts</div></div></div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Current Streak</div>
+        <div class="card-subtitle">Consistency builds resilience</div>
+        <div class="streak-banner">
+          <div class="streak-number" id="streak-count">7</div>
+          <div class="streak-label">Day Check-in Streak 🔥</div>
+          <div class="streak-dots" id="streak-dots"></div>
+        </div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Journey Timeline</div>
+        <div class="card-subtitle">Your path to wellness</div>
+        <div class="timeline" id="milestone-timeline"></div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">Unlocked Achievements</div>
+        <div class="card-subtitle">Badges earned through your dedication</div>
+        <div class="achievements-grid" id="achievements-grid"></div>
+      </div>
+    </div>
+
+    <!-- ═══ LEARNING VAULT ═══ -->
+    <div class="screen" id="screen-vault">
+      <div class="section-heading"><div><div class="section-title">📚 Learning Vault</div><div class="section-subtitle">Psychoeducation resources curated by clinicians</div></div></div>
+      <div class="vault-search-bar mb-24">
+        <input type="text" class="vault-search-input" id="vault-search" placeholder="🔍 Search articles, exercises, videos..." aria-label="Search resources" />
+        <div class="vault-categories" id="vault-categories"></div>
+      </div>
+      <div class="vault-grid" id="vault-grid"></div>
+    </div>
+
+    <!-- ═══ COMMUNITY FEED ═══ -->
+    <div class="screen" id="screen-community">
+      <div class="section-heading"><div><div class="section-title">💬 Community Support</div><div class="section-subtitle">Anonymous, moderated peer support · You are not alone</div></div></div>
+      <div class="glass-card mb-24" style="background:linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.05));border-color:rgba(52,211,153,0.15);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:24px;">🛡️</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--success);">Safe Space Guarantee</div>
+            <div style="font-size:12px;color:var(--text-muted);">All posts are anonymous. AI moderators filter harmful content. Your identity is never revealed.</div>
+          </div>
+        </div>
+      </div>
+      <div id="community-feed"></div>
+      <div class="glass-card" style="margin-top:20px;">
+        <div class="card-title">Share Your Thoughts</div>
+        <textarea class="text-area" id="community-post-input" placeholder="Share something supportive with the community... (anonymous)" aria-label="Write a community post"></textarea>
+        <button class="btn btn-primary" style="margin-top:12px;" id="btn-community-post">🕊️ Post Anonymously</button>
+      </div>
+    </div>
+
+    <!-- ═══ WIPE LOG ═══ -->
+    <div class="screen" id="screen-wipelog">
+      <div class="section-heading"><div><div class="section-title">🗑️ Data Wipe Log</div><div class="section-subtitle">Cryptographic proof that your raw data is permanently destroyed</div></div></div>
+      <div class="glass-card mb-24" style="text-align:center;">
+        <div class="shredder-container" id="shredder-container">
+          <div class="shredder-machine">
+            <div class="shredder-slot"></div>
+            <div class="shredder-body">🔐</div>
+            <div class="shredder-particles" id="shredder-particles"></div>
+          </div>
+          <div class="shredder-status" id="shredder-status">All raw audio & sensitive data has been securely purged</div>
+          <button class="btn btn-outline" id="btn-shred-demo" style="margin-top:16px;">▶ Run Shred Demonstration</button>
+        </div>
+      </div>
+      <div class="glass-card mb-24">
+        <div class="card-title">Destruction Certificates</div>
+        <div class="card-subtitle">SHA-256 hash receipts proving data was irreversibly destroyed</div>
+        <div id="wipe-hash-log"></div>
+      </div>
+      <div class="grid-2 gap-24">
+        <div class="glass-card">
+          <div class="card-title">Data Retention Policy</div>
+          <div class="card-subtitle">What we keep & for how long</div>
+          <div id="retention-policy"></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Purge Statistics</div>
+          <div class="card-subtitle">Lifetime data destruction metrics</div>
+          <div id="purge-stats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TRIAGE LIST ═══ -->
+    <div class="screen" id="screen-triage">
+      <div class="section-heading">
+        <div><div class="section-title">🚦 Patient Triage List</div><div class="section-subtitle">Real-time risk stratification · Color-coded priority</div></div>
+        <div class="triage-filters" id="triage-filters">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="severe" style="border-color:var(--danger);color:var(--danger);">🔴 Severe</button>
+          <button class="chip" data-filter="monitor" style="border-color:var(--warning);color:var(--warning);">🟡 Monitor</button>
+          <button class="chip" data-filter="stable" style="border-color:var(--success);color:var(--success);">🟢 Stable</button>
+        </div>
+      </div>
+      <div id="triage-list"></div>
+    </div>
+
+    <!-- ═══ EMERGENCY ALERTS ═══ -->
+    <div class="screen" id="screen-alerts">
+      <div class="section-heading"><div><div class="section-title">🚨 Emergency Alerts</div><div class="section-subtitle">High-visibility notification center for immediate-risk events</div></div></div>
+      <div id="alert-urgent-banner"></div>
+      <div id="alerts-list"></div>
+    </div>
+
+    <!-- ═══ COMPLIANCE MONITOR ═══ -->
+    <div class="screen" id="screen-compliance">
+      <div class="section-heading"><div><div class="section-title">✅ Compliance Monitor</div><div class="section-subtitle">HIPAA status, encryption health & data retention</div></div></div>
+      <div class="grid-3 gap-24 mb-24" id="compliance-metrics"></div>
+      <div class="grid-2 gap-24 mb-24">
+        <div class="glass-card">
+          <div class="card-title">Encryption Health</div>
+          <div class="card-subtitle">System-wide cryptographic status</div>
+          <div id="encryption-health"></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Data Retention Schedule</div>
+          <div class="card-subtitle">Automated data lifecycle management</div>
+          <div id="retention-schedule"></div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="card-title">Compliance Audit Trail</div>
+        <div class="card-subtitle">Recent compliance-critical events</div>
+        <div id="compliance-audit"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ═══ BREATHING MODAL ═══ -->
+<div id="breathing-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="card-title">🫁 Guided Breathing Exercise</div>
+      <button class="modal-close" onclick="closeBreathingModal()">✕</button>
+    </div>
+    <div style="text-align:center;padding:20px;">
+      <div class="breathing-guided-circle" id="breathing-guided">
+        <span id="breathing-phase">Ready</span>
+      </div>
+      <div id="breathing-timer" style="font-size:48px;font-weight:800;color:var(--accent);margin-top:16px;">0:00</div>
+      <div id="breathing-instruction" style="font-size:14px;color:var(--text-muted);margin-top:8px;">Press Start to begin a 60-second guided breathing session</div>
+      <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
+        <button class="btn btn-primary" id="btn-breathing-start">▶ Start Exercise</button>
+        <button class="btn btn-ghost" id="btn-breathing-stop" style="display:none;">⏹ Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="features.js"></script>
+</body>
+</html>
