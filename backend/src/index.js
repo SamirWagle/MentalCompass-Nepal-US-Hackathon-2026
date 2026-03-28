@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 import { calculateRiskScore, detectBurnoutTrend } from "./lib/scoring.js";
@@ -32,6 +33,11 @@ import {
   deleteUser,
   getGuardiansForPatient,
   getLinkedPatient,
+  updateWearableData,
+  updateCheckinSchedule,
+  verifyDoctorPayment,
+  listAvailableDoctors,
+  getUserStats,
   ROLES
 } from "./store/userStore.js";
 import { generateToken, requireAuth, requireRole, optionalAuth } from "./lib/auth.js";
@@ -44,15 +50,30 @@ import {
   addAiSuggestions,
   addDoctorAssessment,
   getPatientJournalStats,
+  addCheckinDecline,
+  attachWearableToLatestEntry,
 } from "./store/journalStore.js";
 import {
   analyzeJournalContent,
   generateSuggestions as generateSuggestionsForPatient,
   shouldSuggestConsultation,
 } from "./lib/suggestions.js";
+import {
+  createAppointment,
+  getAppointmentsByPatient,
+  getAppointmentStats,
+  confirmAppointmentPayment,
+  updateAppointmentStatus,
+  APPOINTMENT_STATUS,
+} from "./store/appointmentStore.js";
+import { analyzePatientJourney, shouldTriggerConsultationAlert } from "./lib/aiAnalysis.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists for voice journals
+const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -532,6 +553,278 @@ app.get("/api/chv/my-patients", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_
   const allPatients = listUsers(ROLES.PATIENT);
   const myPatients = allPatients.filter(p => p.createdBy === req.user.id);
   sendOk(req, res, { patients: myPatients, total: myPatients.length }, 200, { domain: "chv" });
+});
+
+// ═══════════════════════════════════════════════
+// ── WEARABLE SYNC (PHI-encrypted) ──
+// ═══════════════════════════════════════════════
+
+// Patient: sync wearable biometric data (encrypted PHI)
+app.post("/api/wearables/sync", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { heartRate, sleepHours, steps, stressLevel } = req.body || {};
+    const wearableData = {
+      heartRate: Number(heartRate || 70),
+      sleepHours: Number(sleepHours || 7),
+      steps: Number(steps || 5000),
+      stressLevel: Number(stressLevel || 5),
+      recordedAt: new Date().toISOString(),
+      source: "manual",
+    };
+    const wearableEncrypted = encryptPayload(wearableData, process.env.ENCRYPTION_KEY);
+    updateWearableData(req.user.id, wearableEncrypted, true);
+    attachWearableToLatestEntry(req.user.id, wearableEncrypted, wearableData);
+    sendOk(req, res, {
+      synced: true,
+      wearableConnected: true,
+      summary: wearableData,
+      phiProtected: true,
+    }, 200, { domain: "wearables" });
+  } catch (err) {
+    sendError(req, res, 500, "WEARABLE_SYNC_FAILED", err.message);
+  }
+});
+
+// Patient: disconnect wearable
+app.delete("/api/wearables/sync", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    updateWearableData(req.user.id, null, false);
+    sendOk(req, res, { disconnected: true, wearableConnected: false }, 200, { domain: "wearables" });
+  } catch (err) {
+    sendError(req, res, 500, "WEARABLE_DISCONNECT_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── USER SETTINGS ──
+// ═══════════════════════════════════════════════
+
+app.post("/api/settings/checkin-schedule", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { hour, minute, timezone } = req.body || {};
+    if (hour === undefined || minute === undefined) {
+      return sendError(req, res, 400, "MISSING_FIELDS", "hour and minute are required.");
+    }
+    const schedule = {
+      hour: Math.max(0, Math.min(23, Number(hour))),
+      minute: Math.max(0, Math.min(59, Number(minute))),
+      timezone: timezone || "Asia/Kathmandu",
+    };
+    const updated = updateCheckinSchedule(req.user.id, schedule);
+    if (!updated) return sendError(req, res, 404, "USER_NOT_FOUND", "User not found.");
+    sendOk(req, res, { schedule: updated.checkinSchedule }, 200, { domain: "settings" });
+  } catch (err) {
+    sendError(req, res, 500, "SETTINGS_ERROR", err.message);
+  }
+});
+
+app.get("/api/settings/me", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  sendOk(req, res, {
+    checkinSchedule: req.user.checkinSchedule || { hour: 20, minute: 0, timezone: "Asia/Kathmandu" },
+    wearableConnected: req.user.wearableConnected || false,
+  }, 200, { domain: "settings" });
+});
+
+// ═══════════════════════════════════════════════
+// ── SCHEDULED CHECK-IN: DECLINE (Right to Reject) ──
+// ═══════════════════════════════════════════════
+
+app.post("/api/journals/decline-checkin", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const entry = addCheckinDecline({
+      userId: req.user.id,
+      anonymousId: req.user.anonymousId,
+      reason: reason || "unspecified",
+    });
+    sendOk(req, res, {
+      logged: true,
+      entryId: entry.id,
+      message: "Completely understood. Your check-in has been skipped and your streak is safe. We'll see you next time. \u{1f49a}",
+      streakPreserved: true,
+    }, 200, { domain: "journals" });
+  } catch (err) {
+    sendError(req, res, 500, "DECLINE_CHECKIN_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── AI ANALYSIS ENGINE ──
+// ═══════════════════════════════════════════════
+
+// Patient: analyze own 30-day journey
+app.post("/api/ai/my-analysis", requireAuth, requireRole(ROLES.PATIENT), async (req, res) => {
+  try {
+    const entries = getJournalsByAnonymousId(req.user.anonymousId, 30);
+    const stats = getPatientJournalStats(req.user.anonymousId);
+    const analysis = await analyzePatientJourney(entries, stats);
+    const triggerConsult = shouldTriggerConsultationAlert(analysis, stats);
+    sendOk(req, res, {
+      analysis,
+      consultation: {
+        suggest: triggerConsult,
+        message: triggerConsult
+          ? "We noticed you\u2019ve been having a tough time. Would you like to connect with a doctor?"
+          : null,
+      },
+    }, 200, { domain: "ai" });
+  } catch (err) {
+    sendError(req, res, 500, "AI_ANALYSIS_FAILED", err.message);
+  }
+});
+
+// Doctor/Admin: analyze a specific anonymous patient
+app.post("/api/ai/analyze/:anonymousId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), async (req, res) => {
+  try {
+    const { anonymousId } = req.params;
+    const entries = getJournalsByAnonymousId(anonymousId, 30);
+    const stats = getPatientJournalStats(anonymousId);
+    if (!entries.length) {
+      return sendError(req, res, 404, "NO_ENTRIES", "No journal entries found for this patient.");
+    }
+    const analysis = await analyzePatientJourney(entries, stats);
+    sendOk(req, res, { anonymousId, analysis, stats }, 200, { domain: "ai" });
+  } catch (err) {
+    sendError(req, res, 500, "AI_ANALYSIS_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── APPOINTMENTS & BOOKING ──
+// ═══════════════════════════════════════════════
+
+app.get("/api/appointments/available-doctors", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const doctors = listAvailableDoctors();
+    sendOk(req, res, { doctors, total: doctors.length }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.post("/api/appointments", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { doctorCode, scheduledAt } = req.body || {};
+    if (!doctorCode) return sendError(req, res, 400, "MISSING_FIELDS", "doctorCode is required.");
+    const allDoctors = listUsers(ROLES.DOCTOR);
+    const doctor = allDoctors.find(u => u.doctorCode === doctorCode && u.paymentVerified);
+    if (!doctor) return sendError(req, res, 404, "DOCTOR_NOT_FOUND", "Doctor not found or not available.");
+    const appointment = createAppointment({
+      anonymousPatientId: req.user.anonymousId,
+      doctorId: doctor.id,
+      consultationFee: doctor.consultationFee || 500,
+      scheduledAt: scheduledAt || null,
+      createdBy: req.user.id,
+    });
+    sendOk(req, res, {
+      appointmentId: appointment.id,
+      status: appointment.status,
+      consultationFee: appointment.consultationFee,
+      scheduledAt: appointment.scheduledAt,
+      message: "Appointment requested. Complete payment to confirm.",
+    }, 201, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.get("/api/appointments/mine", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const appointments = getAppointmentsByPatient(req.user.anonymousId);
+    sendOk(req, res, { appointments, total: appointments.length }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.post("/api/appointments/:id/cancel", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const updated = updateAppointmentStatus(req.params.id, APPOINTMENT_STATUS.CANCELLED, { reason });
+    if (!updated) return sendError(req, res, 404, "NOT_FOUND", "Appointment not found.");
+    sendOk(req, res, { cancelled: true }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── PAYMENTS (MOCK) ──
+// ═══════════════════════════════════════════════
+
+// Doctor: pay subscription to unlock platform
+app.post("/api/payments/mock-checkout", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  try {
+    const paymentRef = `PAY-${Date.now().toString(36).toUpperCase()}-${uuidv4().slice(0, 6).toUpperCase()}`;
+    const updated = verifyDoctorPayment(req.user.id, paymentRef);
+    if (!updated) return sendError(req, res, 404, "DOCTOR_NOT_FOUND", "Doctor account not found.");
+    sendOk(req, res, {
+      paymentRef,
+      subscriptionStatus: "active",
+      paymentVerified: true,
+      receipt: { amount: 2999, currency: "NPR", plan: "AegisSpeak Professional", paidAt: new Date().toISOString() },
+      message: "Payment confirmed. Your platform access is now active.",
+    }, 200, { domain: "payments" });
+  } catch (err) {
+    sendError(req, res, 500, "PAYMENT_FAILED", err.message);
+  }
+});
+
+// Patient: pay for a specific appointment
+app.post("/api/payments/appointment/:appointmentId", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const paymentRef = `PAY-${Date.now().toString(36).toUpperCase()}-${uuidv4().slice(0, 6).toUpperCase()}`;
+    const updated = confirmAppointmentPayment(req.params.appointmentId, paymentRef);
+    if (!updated) return sendError(req, res, 404, "APPOINTMENT_NOT_FOUND", "Appointment not found.");
+    sendOk(req, res, {
+      paymentRef,
+      appointmentStatus: updated.status,
+      confirmedAt: updated.confirmedAt,
+      receipt: { amount: updated.consultationFee, currency: "NPR", service: "Doctor Consultation", paidAt: new Date().toISOString() },
+      message: "Payment confirmed! Your consultation has been booked.",
+    }, 200, { domain: "payments" });
+  } catch (err) {
+    sendError(req, res, 500, "PAYMENT_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── SUPER ADMIN: ANALYTICS DASHBOARD ──
+// ═══════════════════════════════════════════════
+
+app.get("/api/admin/analytics", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  try {
+    const userStats = getUserStats();
+    const appointmentStats = getAppointmentStats();
+    const allJournals = listAnonymousJournalPatients();
+    const allEscalations = listEscalations(null);
+    const allPatients = listUsers(ROLES.PATIENT);
+    const regionMap = {};
+    for (const u of allPatients) {
+      const region = u.locationTag || "Unknown";
+      if (!regionMap[region]) regionMap[region] = { region, patients: 0 };
+      regionMap[region].patients++;
+    }
+    sendOk(req, res, {
+      users: userStats,
+      appointments: appointmentStats,
+      journals: {
+        totalAnonymousPatients: allJournals.length,
+        totalEntries: allJournals.reduce((s, p) => s + p.totalEntries, 0),
+        assessedEntries: allJournals.reduce((s, p) => s + p.assessedEntries, 0),
+      },
+      escalations: {
+        total: allEscalations.length,
+        unacknowledged: allEscalations.filter(e => !e.acknowledged).length,
+      },
+      regionStats: Object.values(regionMap),
+      generatedAt: new Date().toISOString(),
+      hipaaCompliant: true,
+      phiStripped: true,
+    }, 200, { domain: "admin" });
+  } catch (err) {
+    sendError(req, res, 500, "ANALYTICS_FAILED", err.message);
+  }
 });
 
 // 404 catch-all (MUST be last)

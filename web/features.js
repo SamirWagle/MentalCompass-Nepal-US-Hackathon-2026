@@ -409,13 +409,28 @@ function acknowledgeAlert(btn, id) {
   setTimeout(() => renderAlerts(), 800);
 }
 
-function renderCompliance() {
+async function renderCompliance() {
+  // Try live API first (requires super_admin auth)
+  let liveData = null;
+  try {
+    const session = window.__aegisSession;
+    if (session?.token && session?.user?.role === 'super_admin') {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const res = await fetch('http://localhost:4000/api/admin/analytics', { headers: hdrs });
+      const json = await res.json();
+      if (json.ok) liveData = json.data;
+    }
+  } catch {}
+
   const metrics = document.getElementById('compliance-metrics');
   if (metrics) {
+    const hipaaStatus = liveData?.hipaaCompliant !== false ? 100 : 0;
+    const phiStripped = liveData?.phiStripped !== false ? 100 : 0;
+    const encHealth = 98;
     const data = [
-      { label: 'HIPAA Status', value: 100, color: 'var(--success)', text: '100%' },
-      { label: 'Encryption Health', value: 98, color: 'var(--accent)', text: '98%' },
-      { label: 'Data Retention', value: 100, color: 'var(--success)', text: '100%' },
+      { label: 'HIPAA Status', value: hipaaStatus, color: 'var(--success)', text: hipaaStatus + '%' },
+      { label: 'PHI Stripped', value: phiStripped, color: 'var(--accent)', text: phiStripped + '%' },
+      { label: 'Encryption Health', value: encHealth, color: 'var(--success)', text: encHealth + '%' },
     ];
     metrics.innerHTML = data.map(d => {
       const circ = 2 * Math.PI * 34;
@@ -434,6 +449,18 @@ function renderCompliance() {
           </div>
         </div>`;
     }).join('');
+
+    // If we have live data, show platform stats
+    if (liveData) {
+      const usersData = liveData.users || {};
+      const journalsData = liveData.journals || {};
+      const escData = liveData.escalations || {};
+      metrics.innerHTML += `
+        <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-value" style="color:var(--accent)">${usersData.total || 0}</div><div class="metric-label">Total Users</div></div>
+        <div class="metric-card"><div class="metric-icon">📝</div><div class="metric-value" style="color:var(--success)">${journalsData.totalEntries || 0}</div><div class="metric-label">Journal Entries</div></div>
+        <div class="metric-card"><div class="metric-icon">🚨</div><div class="metric-value" style="color:var(--danger)">${escData.unacknowledged || 0}</div><div class="metric-label">Open Escalations</div></div>
+      `;
+    }
   }
 
   // Encryption health

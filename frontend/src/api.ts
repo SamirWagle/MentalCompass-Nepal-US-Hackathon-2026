@@ -140,3 +140,222 @@ export async function analyzeJournal(text: string): Promise<JournalAnalysis> {
   const data = await parseApiResponse<{ analysis: JournalAnalysis }>(response, "Journal analysis failed");
   return data.analysis;
 }
+
+// ─── Auth ───────────────────────────────────────
+
+export async function loginUser(email: string, password: string): Promise<{ token: string; user: any }> {
+  const response = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return parseApiResponse<{ token: string; user: any }>(response, "Login failed");
+}
+
+export async function getCurrentUser(token: string): Promise<{ user: any }> {
+  const response = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<{ user: any }>(response, "Auth check failed");
+}
+
+// ─── Journals (authenticated) ───────────────────
+
+export async function createJournalEntry(payload: {
+  type: string;
+  content?: string;
+  wearableData?: any;
+  voiceMetrics?: any;
+}, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/journals`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseApiResponse<any>(response, "Journal create failed");
+}
+
+export async function fetchMyJournals(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/journals/mine`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Journal fetch failed");
+}
+
+export async function declineConsultation(reason: string, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/journals/decline-consult`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+  return parseApiResponse<any>(response, "Decline consultation failed");
+}
+
+export async function declineCheckin(reason: string, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/journals/decline-checkin`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+  return parseApiResponse<any>(response, "Decline check-in failed");
+}
+
+// ─── Wearable ───────────────────────────────────
+
+export async function syncWearable(data: {
+  heartRate: number;
+  sleepHours: number;
+  steps: number;
+  stressLevel: number;
+}, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/wearables/sync`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return parseApiResponse<any>(response, "Wearable sync failed");
+}
+
+export async function disconnectWearable(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/wearables/sync`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Wearable disconnect failed");
+}
+
+// ─── Settings ───────────────────────────────────
+
+export async function updateCheckinSchedule(schedule: { hour: number; minute: number; timezone?: string }, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/settings/checkin-schedule`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(schedule),
+  });
+  return parseApiResponse<any>(response, "Schedule update failed");
+}
+
+export async function fetchMySettings(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/settings/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Settings fetch failed");
+}
+
+// ─── AI Analysis ────────────────────────────────
+
+export async function requestMyAiAnalysis(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/ai/my-analysis`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  return parseApiResponse<any>(response, "AI analysis failed");
+}
+
+// ─── Appointments ────────────────────────────────
+
+export async function fetchAvailableDoctors(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/appointments/available-doctors`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Doctor fetch failed");
+}
+
+export async function requestAppointment(payload: { doctorCode: string; scheduledAt?: string }, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/appointments`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseApiResponse<any>(response, "Appointment request failed");
+}
+
+export async function fetchMyAppointments(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/appointments/mine`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Appointments fetch failed");
+}
+
+// ─── Payments ───────────────────────────────────
+
+export async function payForAppointment(appointmentId: string, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/payments/appointment/${appointmentId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  return parseApiResponse<any>(response, "Payment failed");
+}
+
+export async function payDoctorSubscription(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/payments/mock-checkout`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  return parseApiResponse<any>(response, "Subscription payment failed");
+}
+
+// ─── Admin ───────────────────────────────────────
+
+export async function fetchAdminAnalytics(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/admin/analytics`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Analytics fetch failed");
+}
+
+// ─── CHV / Doctor ────────────────────────────────
+
+export async function fetchDoctorQueue(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/doctor/queue`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Doctor queue fetch failed");
+}
+
+export async function fetchDoctorJournals(anonymousId: string, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/doctor/journals/${anonymousId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "Journal fetch failed");
+}
+
+export async function submitDoctorAssessment(entryId: string, payload: {
+  depressionScore: number;
+  stressLevel: number;
+  anxietyLevel: number;
+  clinicalNotes?: string;
+  recommendsConsultation?: boolean;
+}, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/doctor/assess/${entryId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseApiResponse<any>(response, "Assessment submit failed");
+}
+
+export async function fetchChvMyPatients(token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/chv/my-patients`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseApiResponse<any>(response, "CHV patients fetch failed");
+}
+
+export async function chvCreatePatient(payload: {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+}, token: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/api/chv/create-patient`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseApiResponse<any>(response, "CHV create patient failed");
+}
+

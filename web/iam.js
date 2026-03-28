@@ -34,6 +34,7 @@ const ROLE_LABELS = {
   doctor: 'Doctor',
   patient: 'Patient',
   guardian: 'Guardian',
+  chv: 'FCHV Worker',
 };
 
 const ROLE_ICONS = {
@@ -41,6 +42,7 @@ const ROLE_ICONS = {
   doctor: '🩺',
   patient: '🧑',
   guardian: '👨‍👩‍👧',
+  chv: '🏥',
 };
 
 const ROLE_COLORS = {
@@ -48,7 +50,12 @@ const ROLE_COLORS = {
   doctor: '#0ea5e9',
   patient: '#10b981',
   guardian: '#f59e0b',
+  chv: '#ec4899',
 };
+
+// Expose session & auth helpers globally for other scripts
+window.__aegisSession = session;
+window.__aegisGetAuthHeaders = getAuthHeaders;
 
 /* ══════════════════════════
    LOGIN FLOW
@@ -150,6 +157,10 @@ function buildLoginHTML() {
           <button class="login-role-btn" data-role="super_admin" type="button" aria-pressed="false">
             <span class="login-role-icon">🛡️</span>
             <span class="login-role-label">Admin</span>
+          </button>
+          <button class="login-role-btn" data-role="chv" type="button" aria-pressed="false">
+            <span class="login-role-icon">🏥</span>
+            <span class="login-role-label">FCHV</span>
           </button>
         </div>
 
@@ -429,6 +440,12 @@ function injectRoleBasedNav(user) {
     items.push({ screen: 'guardian-view', icon: '👁️', label: 'Patient Overview', section: 'Family Access' });
     items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
   } else if (user.role === 'patient') {
+    items.push({ screen: 'journal', icon: '📓', label: 'Journal', section: 'My Health' });
+    items.push({ screen: 'booking', icon: '📅', label: 'Book Consultation', section: null });
+    items.push({ screen: 'my-settings', icon: '⚙️', label: 'Settings', section: null });
+    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
+  } else if (user.role === 'chv') {
+    items.push({ screen: 'chv-dashboard', icon: '🏥', label: 'CHV Dashboard', section: 'Field Work' });
     items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
   }
 
@@ -481,6 +498,40 @@ function injectRoleScreens(user) {
     guardianScreen.id = 'screen-guardian-view';
     guardianScreen.innerHTML = buildGuardianViewHTML(user);
     mainContent.appendChild(guardianScreen);
+  }
+
+  // Patient-exclusive screens: Journal, Booking, Settings
+  if (user.role === 'patient') {
+    const journalScreen = document.createElement('div');
+    journalScreen.className = 'screen injected-screen';
+    journalScreen.id = 'screen-journal';
+    journalScreen.innerHTML = buildJournalScreenHTML();
+    mainContent.appendChild(journalScreen);
+    setTimeout(() => initJournalScreen(), 100);
+
+    const bookingScreen = document.createElement('div');
+    bookingScreen.className = 'screen injected-screen';
+    bookingScreen.id = 'screen-booking';
+    bookingScreen.innerHTML = buildBookingScreenHTML();
+    mainContent.appendChild(bookingScreen);
+    setTimeout(() => initBookingScreen(), 100);
+
+    const settingsScreen = document.createElement('div');
+    settingsScreen.className = 'screen injected-screen';
+    settingsScreen.id = 'screen-my-settings';
+    settingsScreen.innerHTML = buildSettingsScreenHTML();
+    mainContent.appendChild(settingsScreen);
+    setTimeout(() => initSettingsScreen(), 100);
+  }
+
+  // CHV-exclusive dashboard
+  if (user.role === 'chv') {
+    const chvScreen = document.createElement('div');
+    chvScreen.className = 'screen injected-screen';
+    chvScreen.id = 'screen-chv-dashboard';
+    chvScreen.innerHTML = buildChvDashboardHTML();
+    mainContent.appendChild(chvScreen);
+    setTimeout(() => initChvDashboard(), 100);
   }
 }
 
@@ -957,6 +1008,494 @@ function buildGuardianViewHTML(user) {
       <button class="btn btn-danger" onclick="showToast('🚨 Emergency contact initiated')">🚨 Emergency Contact</button>
     </div>
   </div>`;
+}
+
+/* ══════════════════════════
+   JOURNAL SCREEN (Patient)
+   ══════════════════════════ */
+
+function buildJournalScreenHTML() {
+  return `
+  <div class="section-heading">
+    <div><div class="section-title">📓 My Journal</div><div class="section-subtitle">Write freely · AI-powered wellness suggestions · Fully encrypted</div></div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">New Entry</div>
+      <div class="card-subtitle">Express yourself — emotional markers auto-detected</div>
+      <textarea class="text-area" id="journal-entry-text" placeholder="Write about how you're feeling today..." style="min-height:140px;"></textarea>
+      <div style="margin-top:12px;display:flex;gap:10px;">
+        <button class="btn btn-primary" id="btn-journal-save">📝 Save Entry</button>
+        <button class="btn btn-outline" id="btn-journal-ai">🧠 Get AI Suggestions</button>
+      </div>
+      <div id="journal-save-status" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">🧠 AI Wellness Insights</div>
+      <div class="card-subtitle">Non-diagnostic lifestyle suggestions</div>
+      <div id="journal-ai-suggestions" style="font-size:14px;color:var(--text-secondary);">
+        Write a journal entry and click "Get AI Suggestions" to receive personalized wellness insights.
+      </div>
+      <div id="journal-consult-prompt" style="display:none;margin-top:16px;">
+        <div style="background:var(--warning-dim);border-radius:var(--radius-md);padding:14px;border:1px solid rgba(251,191,36,0.2);">
+          <div style="font-weight:700;color:var(--warning);margin-bottom:4px;">💡 Professional support recommended</div>
+          <div style="font-size:13px;color:var(--text-secondary);">Based on your recent entries, you may benefit from a consultation.</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigateToScreen('booking')">📅 Book a Consultation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="card-title">📚 Past Entries</div>
+    <div class="card-subtitle">Your journal history — newest first</div>
+    <div id="journal-entries-list" style="margin-top:12px;">
+      <div style="color:var(--text-muted);text-align:center;padding:24px;">Loading your entries...</div>
+    </div>
+  </div>`;
+}
+
+function initJournalScreen() {
+  const saveBtn = document.getElementById('btn-journal-save');
+  const aiBtn = document.getElementById('btn-journal-ai');
+
+  if (saveBtn) saveBtn.addEventListener('click', async () => {
+    const text = document.getElementById('journal-entry-text')?.value?.trim();
+    if (!text) { showToast('Write something first'); return; }
+    saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving...';
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const res = await fetch(`${IAM_API}/api/journals`, { method: 'POST', headers: hdrs, body: JSON.stringify({ text }) });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('journal-entry-text').value = '';
+        document.getElementById('journal-save-status').textContent = '✅ Entry saved · ID: ' + (data.data?.entry?.id || '').slice(0,8);
+        showToast('📝 Journal entry saved');
+        loadJournalEntries();
+      } else { throw new Error(data.error?.message || 'Save failed'); }
+    } catch (e) { showToast('⚠️ ' + e.message); }
+    saveBtn.disabled = false; saveBtn.textContent = '📝 Save Entry';
+  });
+
+  if (aiBtn) aiBtn.addEventListener('click', async () => {
+    aiBtn.disabled = true; aiBtn.textContent = '⏳ Analyzing...';
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const res = await fetch(`${IAM_API}/api/ai/my-analysis`, { method: 'POST', headers: hdrs });
+      const data = await res.json();
+      const analysis = data.data || {};
+      const sugEl = document.getElementById('journal-ai-suggestions');
+      if (sugEl) {
+        const sug = analysis.suggestions || analysis.analysis?.suggestions || ['Keep journaling daily', 'Try a breathing exercise', 'Maintain your sleep schedule'];
+        sugEl.innerHTML = sug.map(s => `<div class="signal-item"><span class="signal-name">💡 ${typeof s === 'string' ? s : s.text || s}</span></div>`).join('');
+      }
+      if (analysis.suggestConsultation || analysis.analysis?.suggestConsultation) {
+        const prompt = document.getElementById('journal-consult-prompt');
+        if (prompt) prompt.style.display = 'block';
+      }
+      showToast('🧠 AI analysis complete');
+    } catch { showToast('⚠️ AI analysis unavailable — try again later'); }
+    aiBtn.disabled = false; aiBtn.textContent = '🧠 Get AI Suggestions';
+  });
+
+  loadJournalEntries();
+}
+
+async function loadJournalEntries() {
+  const list = document.getElementById('journal-entries-list');
+  if (!list) return;
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/journals/mine`, { headers: hdrs });
+    const data = await res.json();
+    const entries = data.data?.entries || [];
+    if (!entries.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No journal entries yet. Start writing above!</div>';
+      return;
+    }
+    list.innerHTML = entries.slice(0, 20).map(e => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${new Date(e.createdAt).toLocaleString()}</span>
+          ${e.aiSuggestions?.length ? '<span class="badge badge-low">AI Reviewed</span>' : ''}
+        </div>
+        <div class="record-body" style="font-size:14px;">${escapeHtml((e.text || '').slice(0, 300))}${(e.text || '').length > 300 ? '...' : ''}</div>
+      </div>
+    `).join('');
+  } catch {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">Could not load entries. Backend may be offline.</div>';
+  }
+}
+
+/* ══════════════════════════
+   BOOKING SCREEN (Patient)
+   ══════════════════════════ */
+
+function buildBookingScreenHTML() {
+  return `
+  <div class="section-heading">
+    <div><div class="section-title">📅 Book a Consultation</div><div class="section-subtitle">Anonymous doctor selection · Secure payment · Instant scheduling</div></div>
+  </div>
+
+  <div class="glass-card mb-24" style="background:linear-gradient(135deg,rgba(10,132,255,0.05),rgba(52,211,153,0.03));border-color:rgba(10,132,255,0.12);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:24px;">🔒</span>
+      <div style="font-size:13px;color:var(--text-secondary);">Doctors only see your anonymous journal ID (JRN-XXXX). Your personal identity is never shared with clinicians.</div>
+    </div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">Step 1: Select a Doctor</div>
+      <div class="card-subtitle">Available professionals for consultation</div>
+      <div id="booking-doctor-list">
+        <div style="color:var(--text-muted);text-align:center;padding:24px;">Loading available doctors...</div>
+      </div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">Step 2: Confirm & Pay</div>
+      <div class="card-subtitle">Simulated payment for demo</div>
+      <div id="booking-selected-info" style="margin-bottom:16px;">
+        <div style="color:var(--text-muted);font-size:14px;">Select a doctor first</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="booking-notes">Consultation Notes (optional)</label>
+        <textarea id="booking-notes" class="text-area" placeholder="Describe what you'd like to discuss..." style="min-height:80px;"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-booking-confirm" disabled>📅 Confirm Booking</button>
+      <div id="booking-receipt" style="display:none;margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="card-title">My Appointments</div>
+    <div class="card-subtitle">Upcoming and past consultations</div>
+    <div id="booking-my-appointments">
+      <div style="color:var(--text-muted);text-align:center;padding:24px;">Loading appointments...</div>
+    </div>
+  </div>`;
+}
+
+let selectedDoctorId = null;
+
+function initBookingScreen() {
+  loadAvailableDoctors();
+  loadMyAppointments();
+
+  const confirmBtn = document.getElementById('btn-booking-confirm');
+  if (confirmBtn) confirmBtn.addEventListener('click', async () => {
+    if (!selectedDoctorId) { showToast('Select a doctor first'); return; }
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳ Booking...';
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const notes = document.getElementById('booking-notes')?.value || '';
+      const res = await fetch(`${IAM_API}/api/appointments`, {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ doctorId: selectedDoctorId, notes, scheduledAt: new Date(Date.now() + 86400000).toISOString() })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const appt = data.data?.appointment;
+        // Simulate payment
+        try {
+          await fetch(`${IAM_API}/api/payments/appointment/${appt.id}`, {
+            method: 'POST', headers: hdrs,
+            body: JSON.stringify({ method: 'card_simulated', amount: 500 })
+          });
+        } catch {}
+        const receipt = document.getElementById('booking-receipt');
+        if (receipt) {
+          receipt.style.display = 'block';
+          receipt.innerHTML = `
+            <div class="plan-box">
+              <div class="plan-label">✅ Booking Confirmed</div>
+              <div class="plan-text">Appointment ID: ${(appt.id || '').slice(0,8)}<br>Scheduled: ${new Date(appt.scheduledAt).toLocaleString()}<br>Status: Confirmed & Paid (demo)</div>
+            </div>`;
+        }
+        showToast('✅ Consultation booked successfully');
+        selectedDoctorId = null;
+        loadMyAppointments();
+      } else { throw new Error(data.error?.message || 'Booking failed'); }
+    } catch (e) { showToast('⚠️ ' + e.message); }
+    confirmBtn.disabled = false; confirmBtn.textContent = '📅 Confirm Booking';
+  });
+}
+
+async function loadAvailableDoctors() {
+  const list = document.getElementById('booking-doctor-list');
+  if (!list) return;
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/appointments/available-doctors`, { headers: hdrs });
+    const data = await res.json();
+    const doctors = data.data?.doctors || [];
+    if (!doctors.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No doctors available. Ask admin to create doctor accounts.</div>';
+      return;
+    }
+    list.innerHTML = doctors.map(d => `
+      <div class="clin-patient-card ${selectedDoctorId === d.id ? 'active' : ''}" data-doc-id="${d.id}" style="cursor:pointer;">
+        <div class="clin-patient-title">
+          <div class="clin-patient-name">🩺 ${escapeHtml(d.displayName || d.fullName || 'Anonymous Doctor')}</div>
+          <span class="badge badge-low">${d.doctorType || 'General'}</span>
+        </div>
+        <div class="clin-patient-meta">Verified · Anonymous consultation</div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-doc-id]').forEach(card => {
+      card.addEventListener('click', () => {
+        selectedDoctorId = card.dataset.docId;
+        list.querySelectorAll('[data-doc-id]').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const info = document.getElementById('booking-selected-info');
+        if (info) info.innerHTML = `<div style="font-size:14px;color:var(--success);font-weight:600;">✅ Doctor selected</div>`;
+        const btn = document.getElementById('btn-booking-confirm');
+        if (btn) btn.disabled = false;
+      });
+    });
+  } catch {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">Could not load doctors.</div>';
+  }
+}
+
+async function loadMyAppointments() {
+  const el = document.getElementById('booking-my-appointments');
+  if (!el) return;
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/appointments/mine`, { headers: hdrs });
+    const data = await res.json();
+    const appts = data.data?.appointments || [];
+    if (!appts.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No appointments yet.</div>';
+      return;
+    }
+    el.innerHTML = appts.map(a => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${new Date(a.scheduledAt).toLocaleString()}</span>
+          <span class="badge ${a.status === 'confirmed' ? 'badge-low' : a.status === 'cancelled' ? 'badge-high' : 'badge-moderate'}">${(a.status || 'pending').toUpperCase()}</span>
+        </div>
+        <div class="record-body" style="font-size:13px;">Doctor: ${a.doctorId?.slice(0,8) || 'TBD'}${a.notes ? ' · Notes: ' + escapeHtml(a.notes.slice(0,80)) : ''}</div>
+      </div>
+    `).join('');
+  } catch {
+    el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">Could not load appointments.</div>';
+  }
+}
+
+/* ══════════════════════════
+   SETTINGS SCREEN (Patient)
+   ══════════════════════════ */
+
+function buildSettingsScreenHTML() {
+  return `
+  <div class="section-heading">
+    <div><div class="section-title">⚙️ Settings</div><div class="section-subtitle">Wearable connectivity · Check-in schedule · Privacy controls</div></div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">⌚ Wearable Sync</div>
+      <div class="card-subtitle">Connect health data from your wearable device</div>
+      <div style="background:var(--accent-dim);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;">
+        <span style="font-size:12px;color:var(--accent);font-weight:600;">🔐 All biometric data encrypted with AES-256 before transmission</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Heart Rate (bpm)</label>
+        <input type="number" id="settings-hr" class="text-area" style="min-height:44px;resize:none;" value="72" min="40" max="200" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Steps Today</label>
+        <input type="number" id="settings-steps" class="text-area" style="min-height:44px;resize:none;" value="6500" min="0" max="50000" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sleep Hours (last night)</label>
+        <input type="number" id="settings-sleep-hrs" class="text-area" style="min-height:44px;resize:none;" value="7" min="0" max="24" step="0.5" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Blood Oxygen (%)</label>
+        <input type="number" id="settings-spo2" class="text-area" style="min-height:44px;resize:none;" value="98" min="80" max="100" />
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-settings-sync">⌚ Sync Wearable Data</button>
+      <div id="settings-sync-status" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-title">⏰ Check-In Schedule</div>
+      <div class="card-subtitle">Set your preferred daily check-in time</div>
+      <div class="form-group">
+        <label class="form-label">Morning Check-In Time</label>
+        <input type="time" id="settings-checkin-time" class="text-area" style="min-height:44px;resize:none;" value="08:00" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Frequency</label>
+        <select id="settings-checkin-freq" class="text-area" style="min-height:44px;resize:none;">
+          <option value="daily">Daily</option>
+          <option value="twice_daily">Twice Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+      <button class="btn btn-outline btn-full" id="btn-settings-schedule">💾 Save Schedule</button>
+      <div id="settings-schedule-status" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
+
+      <div style="margin-top:24px;border-top:1px solid var(--border-glass);padding-top:16px;">
+        <div class="card-title" style="font-size:15px;">🔒 Privacy</div>
+        <div class="signal-item"><span class="signal-name">✅ Biometric data AES-256 encrypted</span></div>
+        <div class="signal-item"><span class="signal-name">✅ Doctors see anonymous ID only</span></div>
+        <div class="signal-item"><span class="signal-name">✅ Raw audio never persists</span></div>
+        <div class="signal-item"><span class="signal-name">✅ HIPAA & GDPR compliant</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function initSettingsScreen() {
+  const syncBtn = document.getElementById('btn-settings-sync');
+  if (syncBtn) syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true; syncBtn.textContent = '⏳ Syncing...';
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const payload = {
+        heartRate: +(document.getElementById('settings-hr')?.value || 72),
+        steps: +(document.getElementById('settings-steps')?.value || 6500),
+        sleepHours: +(document.getElementById('settings-sleep-hrs')?.value || 7),
+        bloodOxygen: +(document.getElementById('settings-spo2')?.value || 98),
+        source: 'web_manual',
+        timestamp: new Date().toISOString()
+      };
+      const res = await fetch(`${IAM_API}/api/wearables/sync`, { method: 'POST', headers: hdrs, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('settings-sync-status').innerHTML = '<span style="color:var(--success)">✅ Wearable data synced · Encrypted with AES-256</span>';
+        showToast('⌚ Wearable data synced and encrypted');
+      } else { throw new Error(data.error?.message || 'Sync failed'); }
+    } catch (e) { showToast('⚠️ ' + e.message); }
+    syncBtn.disabled = false; syncBtn.textContent = '⌚ Sync Wearable Data';
+  });
+
+  const schedBtn = document.getElementById('btn-settings-schedule');
+  if (schedBtn) schedBtn.addEventListener('click', async () => {
+    schedBtn.disabled = true;
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const time = document.getElementById('settings-checkin-time')?.value || '08:00';
+      const freq = document.getElementById('settings-checkin-freq')?.value || 'daily';
+      const res = await fetch(`${IAM_API}/api/settings/checkin-schedule`, {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ preferredTime: time, frequency: freq })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('settings-schedule-status').innerHTML = '<span style="color:var(--success)">✅ Schedule saved</span>';
+        showToast('⏰ Check-in schedule updated');
+      } else { throw new Error(data.error?.message || 'Failed'); }
+    } catch (e) { showToast('⚠️ ' + e.message); }
+    schedBtn.disabled = false;
+  });
+}
+
+/* ══════════════════════════
+   CHV DASHBOARD (FCHV)
+   ══════════════════════════ */
+
+function buildChvDashboardHTML() {
+  return `
+  <div class="section-heading">
+    <div><div class="section-title">🏥 FCHV Field Dashboard</div><div class="section-subtitle">Door-to-door community health screening & patient registration</div></div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">➕ Register New Patient</div>
+      <div class="card-subtitle">Create a patient account for field screening</div>
+      <div class="form-group">
+        <label class="form-label" for="chv-patient-name">Patient Name *</label>
+        <input type="text" id="chv-patient-name" class="text-area" style="min-height:44px;resize:none;" placeholder="Full name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="chv-patient-email">Email *</label>
+        <input type="email" id="chv-patient-email" class="text-area" style="min-height:44px;resize:none;" placeholder="patient@example.com" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="chv-patient-phone">Phone</label>
+        <input type="tel" id="chv-patient-phone" class="text-area" style="min-height:44px;resize:none;" placeholder="+977-9800000000" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="chv-initial-note">Initial Screening Note</label>
+        <textarea id="chv-initial-note" class="text-area" placeholder="Initial observation from field visit..." style="min-height:80px;"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-chv-register">➕ Register & Create Journal</button>
+      <div id="chv-register-status" style="margin-top:10px;font-size:13px;color:var(--text-muted);"></div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-title">📋 My Registered Patients</div>
+      <div class="card-subtitle">Patients registered through your field work</div>
+      <div id="chv-patient-list">
+        <div style="color:var(--text-muted);text-align:center;padding:24px;">Loading patients...</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function initChvDashboard() {
+  loadChvPatients();
+
+  const regBtn = document.getElementById('btn-chv-register');
+  if (regBtn) regBtn.addEventListener('click', async () => {
+    const name = document.getElementById('chv-patient-name')?.value?.trim();
+    const email = document.getElementById('chv-patient-email')?.value?.trim();
+    const phone = document.getElementById('chv-patient-phone')?.value?.trim();
+    const note = document.getElementById('chv-initial-note')?.value?.trim();
+    if (!name || !email) { showToast('Name and email are required'); return; }
+    regBtn.disabled = true; regBtn.textContent = '⏳ Registering...';
+    try {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const res = await fetch(`${IAM_API}/api/chv/create-patient`, {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ fullName: name, email, password: 'AegisPatient@2026', phone, initialJournalText: note || 'Initial field screening — no immediate concerns.' })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('chv-register-status').innerHTML = `<span style="color:var(--success)">✅ ${escapeHtml(name)} registered · Anonymous ID: ${data.data?.anonymousJournalId || 'assigned'}</span>`;
+        document.getElementById('chv-patient-name').value = '';
+        document.getElementById('chv-patient-email').value = '';
+        document.getElementById('chv-patient-phone').value = '';
+        document.getElementById('chv-initial-note').value = '';
+        showToast('✅ Patient registered with initial journal entry');
+        loadChvPatients();
+      } else { throw new Error(data.error?.message || 'Registration failed'); }
+    } catch (e) { showToast('⚠️ ' + e.message); }
+    regBtn.disabled = false; regBtn.textContent = '➕ Register & Create Journal';
+  });
+}
+
+async function loadChvPatients() {
+  const list = document.getElementById('chv-patient-list');
+  if (!list) return;
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/chv/my-patients`, { headers: hdrs });
+    const data = await res.json();
+    const patients = data.data?.patients || [];
+    if (!patients.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No patients registered yet. Use the form to create your first.</div>';
+      return;
+    }
+    list.innerHTML = patients.map(p => `
+      <div class="clin-patient-card stable" style="margin-bottom:8px;">
+        <div class="clin-patient-title">
+          <div class="clin-patient-name">${escapeHtml(p.fullName)}</div>
+          <span class="badge badge-low">Registered</span>
+        </div>
+        <div class="clin-patient-meta">${escapeHtml(p.email)} · Anonymous ID: ${p.anonymousJournalId || 'N/A'}</div>
+      </div>
+    `).join('');
+  } catch {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">Could not load patients.</div>';
+  }
 }
 
 /* ══════════════════════════

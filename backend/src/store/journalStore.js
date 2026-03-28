@@ -30,7 +30,7 @@ export const ENTRY_TYPES = ['text', 'voice', 'wearable', 'call'];
  * Create a new journal entry.
  * Stored with anonymousId — never the user's real name.
  */
-export function createJournalEntry({ userId, anonymousId, type, content, voiceMetrics, wearableData, sentiment }) {
+export function createJournalEntry({ userId, anonymousId, type, content, audioUrl, voiceMetrics, wearableData, wearablePhi, sentiment }) {
   const entries = readStore();
 
   const entry = {
@@ -40,13 +40,16 @@ export function createJournalEntry({ userId, anonymousId, type, content, voiceMe
     anonymousId,     // this is what doctors see (e.g., JRN-A7X3)
     type: ENTRY_TYPES.includes(type) ? type : 'text',
     content: content || '',
-    voiceMetrics: voiceMetrics || null,       // { jitter, pitch, energy, speechRate }
-    wearableData: wearableData || null,       // { heartRate, sleepHours, steps, stressLevel }
-    sentiment: sentiment || null,             // AI-computed after creation
-    aiSuggestions: [],                        // populated by AI engine
-    doctorAssessments: [],                    // populated by doctor reviews
+    audioUrl: audioUrl || null,            // voice journal: path/URL to audio file
+    voiceMetrics: voiceMetrics || null,    // { jitter, pitch, energy, speechRate }
+    wearableData: wearableData || null,    // raw wearable data (non-PHI summary)
+    wearablePhi: wearablePhi || null,      // AES-encrypted PHI biometric payload
+    sentiment: sentiment || null,          // AI-computed after creation
+    aiSuggestions: [],                     // populated by AI engine
+    doctorAssessments: [],                 // populated by doctor reviews
     createdAt: new Date().toISOString(),
-    declineNote: null,                        // if user declined scheduled call
+    declineNote: null,                     // if user declined scheduled call
+    checkinDecline: null,                  // { reason, declinedAt } for rejected scheduled check-ins
   };
 
   entries.push(entry);
@@ -211,4 +214,57 @@ export function getPatientJournalStats(anonymousId) {
 function sanitizeForDoctor(entry) {
   const { userId, ...safe } = entry;
   return safe;
+}
+
+/**
+ * Log a declined check-in (right to reject) on a journal entry or as standalone record
+ */
+export function addCheckinDecline({ anonymousId, userId, reason }) {
+  const entries = readStore();
+
+  // Create a minimal 'call' type entry that records the decline
+  const entry = {
+    id: uuidv4(),
+    journalId: `JE-${Date.now().toString(36).toUpperCase()}-DECL`,
+    userId,
+    anonymousId,
+    type: 'call',
+    content: '',
+    audioUrl: null,
+    voiceMetrics: null,
+    wearableData: null,
+    wearablePhi: null,
+    sentiment: null,
+    aiSuggestions: [],
+    doctorAssessments: [],
+    createdAt: new Date().toISOString(),
+    declineNote: reason || 'No reason given',
+    checkinDecline: {
+      reason: reason || 'unspecified',
+      declinedAt: new Date().toISOString(),
+    },
+  };
+
+  entries.push(entry);
+  writeStore(entries);
+  return entry;
+}
+
+/**
+ * Add wearable PHI data to the most recent journal entry for a user
+ */
+export function attachWearableToLatestEntry(userId, wearablePhi, wearableData) {
+  const entries = readStore();
+  // Find most recent entry for this user
+  const sorted = entries
+    .filter(e => e.userId === userId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (!sorted.length) return null;
+
+  const idx = entries.findIndex(e => e.id === sorted[0].id);
+  entries[idx].wearablePhi = wearablePhi;
+  entries[idx].wearableData = wearableData;
+  writeStore(entries);
+  return entries[idx];
 }

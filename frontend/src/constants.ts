@@ -1,6 +1,6 @@
 export type { CheckinInput, CheckinResponse, EscalationRecord, PredictiveInsights, SmsPayloadResult, TrendPoint, JournalAnalysis, ChatResponse } from "./types";
 
-export type ScreenKey = "copilot" | "checkin" | "signals" | "insights" | "clinician" | "privacy" | "milestones" | "vault" | "community" | "wipelog" | "triage" | "alerts" | "compliance";
+export type ScreenKey = "copilot" | "checkin" | "signals" | "insights" | "clinician" | "privacy" | "milestones" | "vault" | "community" | "wipelog" | "triage" | "alerts" | "compliance" | "journal" | "settings" | "booking";
 export type LanguageCode = "en" | "ne" | "hi";
 export type Personality = "calm" | "analytical" | "motivational";
 

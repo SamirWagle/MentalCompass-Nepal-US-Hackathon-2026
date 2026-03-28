@@ -31,5 +31,8 @@ export function saveEscalation(record) {
 
 export function listEscalations(userId) {
   const records = readAll();
+  // null userId = return all (SuperAdmin analytics)
+  if (userId === null || userId === undefined) return records;
   return records.filter((item) => item.userId === userId);
 }
+

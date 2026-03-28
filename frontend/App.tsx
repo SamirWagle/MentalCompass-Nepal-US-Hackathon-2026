@@ -20,18 +20,24 @@ import CheckinScreen from "./src/screens/CheckinScreen";
 import ClinicianScreen from "./src/screens/ClinicianScreen";
 import CopilotScreen from "./src/screens/CopilotScreen";
 import InsightsScreen from "./src/screens/InsightsScreen";
+import LoginScreen from "./src/screens/LoginScreen";
 import PrivacyScreen from "./src/screens/PrivacyScreen";
 import SignalsScreen from "./src/screens/SignalsScreen";
 
 // New screens
 import AlertsScreen from "./src/screens/AlertsScreen";
+import BookingScreen from "./src/screens/BookingScreen";
+import CheckinCallScreen from "./src/screens/CheckinCallScreen";
 import CommunityScreen from "./src/screens/CommunityScreen";
 import ComplianceScreen from "./src/screens/ComplianceScreen";
+import JournalScreen from "./src/screens/JournalScreen";
 import MilestonesScreen from "./src/screens/MilestonesScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 import { MOCK_ALERTS, MOCK_PATIENTS } from "./src/mockData";
 import TriageScreen from "./src/screens/TriageScreen";
 import VaultScreen from "./src/screens/VaultScreen";
 import WipeLogScreen from "./src/screens/WipeLogScreen";
+import { declineCheckin } from "./src/api";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -123,6 +129,39 @@ export default function App() {
   const [insights, setInsights] = useState<PredictiveInsights | null>(null);
   const [smsPayload, setSmsPayload] = useState<SmsPayloadResult | null>(null);
   const [escalations, setEscalations] = useState<EscalationRecord[]>([]);
+  // Auth state (scoped token shared with child screens via AsyncStorage)
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
+  // Check-in call modal
+  const [showCheckinCall, setShowCheckinCall] = useState(false);
+
+  // Load auth token from storage
+  useEffect(() => {
+    (async () => {
+      const t = await AsyncStorage.getItem("aegisspeak_token_v1");
+      const u = await AsyncStorage.getItem("aegisspeak_user_v1");
+      if (t && u) {
+        setAuthToken(t);
+        try { setAuthUser(JSON.parse(u)); } catch {}
+      }
+      setAuthLoaded(true);
+    })();
+  }, []);
+
+  const handleLoginSuccess = async (token: string, user: any) => {
+    setAuthToken(token);
+    setAuthUser(user);
+    await AsyncStorage.setItem("aegisspeak_token_v1", token);
+    await AsyncStorage.setItem("aegisspeak_user_v1", JSON.stringify(user));
+  };
+
+  const handleLogout = async () => {
+    setAuthToken(null);
+    setAuthUser(null);
+    await AsyncStorage.removeItem("aegisspeak_token_v1");
+    await AsyncStorage.removeItem("aegisspeak_user_v1");
+  };
 
   // Hero parallax
   const heroScale = useRef(new Animated.Value(0.95)).current;
@@ -220,10 +259,13 @@ export default function App() {
   const tabs: { label: string; icon: string; key: ScreenKey; section?: string }[] = [
     { label: "Copilot", icon: "🤖", key: "copilot" },
     { label: "Check-In", icon: "📊", key: "checkin" },
+    { label: "Journal", icon: "📝", key: "journal" },
     { label: "Signals", icon: "📡", key: "signals" },
     { label: "Insights", icon: "🔮", key: "insights" },
+    { label: "Book Doctor", icon: "🩺", key: "booking" },
     { label: "Milestones", icon: "🏆", key: "milestones" },
     { label: "Vault", icon: "📚", key: "vault" },
+    { label: "Settings", icon: "⚙️", key: "settings" },
     { label: "Community", icon: "💬", key: "community" },
     { label: "Clinician", icon: "🏥", key: "clinician", section: "Provider" },
     { label: "Triage", icon: "🚦", key: "triage" },
@@ -232,6 +274,26 @@ export default function App() {
     { label: "Privacy", icon: "🔒", key: "privacy", section: "System" },
     { label: "Wipe Log", icon: "🗑️", key: "wipelog" },
   ];
+
+  // Auth gate: show login screen while not authenticated
+  if (authLoaded && !authToken) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <StatusBar style="dark" />
+        <LoginScreen onLoginSuccess={handleLoginSuccess} />
+      </SafeAreaView>
+    );
+  }
+
+  // Loading state while checking auth
+  if (!authLoaded) {
+    return (
+      <SafeAreaView style={[s.safe, { alignItems: "center", justifyContent: "center" }]}>
+        <StatusBar style="dark" />
+        <Text style={{ color: theme.textDim, fontSize: 16 }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe}>
@@ -263,6 +325,7 @@ export default function App() {
         {tabs.map((t) => (
           <NavChip key={t.key} label={`${t.icon} ${t.label}`} active={screen === t.key} onPress={() => setScreen(t.key)} />
         ))}
+        <NavChip label="🚪 Logout" active={false} onPress={handleLogout} />
       </ScrollView>
 
       {/* Content with animated transitions */}
@@ -288,6 +351,15 @@ export default function App() {
         <AnimatedScreen screenKey="community" currentScreen={screen}>
           <CommunityScreen />
         </AnimatedScreen>
+        <AnimatedScreen screenKey="journal" currentScreen={screen}>
+          <JournalScreen onNavigateBooking={() => setScreen("booking")} />
+        </AnimatedScreen>
+        <AnimatedScreen screenKey="settings" currentScreen={screen}>
+          <SettingsScreen />
+        </AnimatedScreen>
+        <AnimatedScreen screenKey="booking" currentScreen={screen}>
+          <BookingScreen />
+        </AnimatedScreen>
         <AnimatedScreen screenKey="clinician" currentScreen={screen}>
           <ClinicianScreen records={records} result={result} onRefresh={refreshRemoteData} />
         </AnimatedScreen>
@@ -307,6 +379,18 @@ export default function App() {
           <WipeLogScreen />
         </AnimatedScreen>
       </ScrollView>
+
+      {/* Scheduled Check-In Call Modal — full screen takeover */}
+      <CheckinCallScreen
+        visible={showCheckinCall}
+        onAnswer={() => { setShowCheckinCall(false); setScreen("journal"); }}
+        onDecline={async (reason) => {
+          setShowCheckinCall(false);
+          if (authToken) {
+            try { await declineCheckin(reason, authToken); } catch {}
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }

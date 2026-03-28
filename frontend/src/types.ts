@@ -85,3 +85,84 @@ export type ChatResponse = {
   timestamp: string;
   powered: "gemini" | "template";
 };
+
+// ─── New types ───────────────────────────────────
+
+export type WearableData = {
+  heartRate: number;
+  sleepHours: number;
+  steps: number;
+  stressLevel: number;
+  recordedAt?: string;
+  source?: string;
+};
+
+export type AiSuggestion = {
+  category: "music" | "article" | "exercise" | "breathing" | "social" | "selfcare";
+  title: string;
+  desc: string;
+  icon: string;
+};
+
+export type AiAnalysis = {
+  suggestions: AiSuggestion[];
+  encouragement: string;
+  declining: boolean;
+  declineMessage: string | null;
+  trendSummary: string;
+  generatedAt: string;
+  source: "gemini" | "fallback";
+};
+
+export type JournalEntry = {
+  id: string;
+  journalId: string;
+  anonymousId: string;
+  type: "text" | "voice" | "wearable" | "call";
+  content: string;
+  audioUrl: string | null;
+  wearableData: WearableData | null;
+  sentiment: {
+    score: number;
+    level: "positive" | "neutral" | "needs_support";
+    positiveIndicators: number;
+    concernIndicators: number;
+  } | null;
+  aiSuggestions: any;
+  createdAt: string;
+  checkinDecline: { reason: string; declinedAt: string } | null;
+};
+
+export type Appointment = {
+  id: string;
+  anonymousPatientId: string;
+  requestedAt: string;
+  scheduledAt: string | null;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  consultationFee: number;
+  paymentStatus: "unpaid" | "paid" | "refunded";
+  paymentRef: string | null;
+  confirmedAt: string | null;
+};
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  role: "super_admin" | "doctor" | "patient" | "guardian" | "chv";
+  anonymousId: string | null;
+  doctorCode: string | null;
+  doctorType: string | null;
+  wearableConnected: boolean;
+  checkinSchedule: { hour: number; minute: number; timezone: string } | null;
+  paymentVerified: boolean;
+  subscriptionStatus: string | null;
+};
+
+export type AvailableDoctor = {
+  doctorCode: string;
+  doctorType: string;
+  isActive: boolean;
+  consultationFee: number;
+};
+
