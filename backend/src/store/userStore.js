@@ -30,10 +30,25 @@ export const ROLES = {
   DOCTOR: 'doctor',
   PATIENT: 'patient',
   GUARDIAN: 'guardian',
+  CHV: 'chv', // Community Health Volunteer (Mini Admin)
 };
 
 // Doctor sub-types
 export const DOCTOR_TYPES = ['psychiatrist', 'psychologist', 'general'];
+
+/**
+ * Generate a unique anonymous ID for patients (JRN-XXXX format).
+ * Doctors only ever see this ID — never the patient's real identity.
+ */
+function generateAnonymousId(existingUsers) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id;
+  const existingIds = new Set(existingUsers.map(u => u.anonymousId).filter(Boolean));
+  do {
+    id = 'JRN-' + Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  } while (existingIds.has(id));
+  return id;
+}
 
 /**
  * Seed the default super-admin account if it doesn't exist.
@@ -45,6 +60,7 @@ export function seedSuperAdmin() {
 
   const admin = {
     id: uuidv4(),
+    anonymousId: null, // admins don't need anonymous IDs
     email: 'admin@aegisspeak.com',
     password: bcrypt.hashSync('AegisAdmin@2026', 10),
     fullName: 'System Administrator',
@@ -56,6 +72,9 @@ export function seedSuperAdmin() {
     doctorType: null,
     phone: '',
     avatar: '🛡️',
+    consentGiven: true,
+    consentAt: new Date().toISOString(),
+    subscription: null,
   };
 
   users.push(admin);
@@ -97,10 +116,15 @@ export function createUser({ email, password, fullName, role, doctorType, linked
     [ROLES.DOCTOR]: '🩺',
     [ROLES.PATIENT]: '🧑',
     [ROLES.GUARDIAN]: '👨‍👩‍👧',
+    [ROLES.CHV]: '👩‍⚕️',
   };
+
+  // Patients get anonymous IDs — doctors/admins/CHVs/guardians don't
+  const anonymousId = role === ROLES.PATIENT ? generateAnonymousId(users) : null;
 
   const user = {
     id: uuidv4(),
+    anonymousId,
     email,
     password: bcrypt.hashSync(password, 10),
     fullName,
@@ -112,6 +136,9 @@ export function createUser({ email, password, fullName, role, doctorType, linked
     doctorType: role === ROLES.DOCTOR ? (doctorType || 'general') : null,
     phone: phone || '',
     avatar: avatarMap[role] || '🧑',
+    consentGiven: role === ROLES.PATIENT,
+    consentAt: role === ROLES.PATIENT ? new Date().toISOString() : null,
+    subscription: role === ROLES.DOCTOR ? 'pending' : null,
   };
 
   users.push(user);

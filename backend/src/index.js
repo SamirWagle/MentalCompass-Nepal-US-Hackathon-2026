@@ -35,6 +35,21 @@ import {
   ROLES
 } from "./store/userStore.js";
 import { generateToken, requireAuth, requireRole, optionalAuth } from "./lib/auth.js";
+import {
+  createJournalEntry,
+  getJournalsByUserId,
+  getJournalsByAnonymousId,
+  getJournalById,
+  listAnonymousJournalPatients,
+  addAiSuggestions,
+  addDoctorAssessment,
+  getPatientJournalStats,
+} from "./store/journalStore.js";
+import {
+  analyzeJournalContent,
+  generateSuggestions as generateSuggestionsForPatient,
+  shouldSuggestConsultation,
+} from "./lib/suggestions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -356,6 +371,167 @@ app.get("/api/iam/my-patient", requireAuth, requireRole(ROLES.GUARDIAN), (req, r
   const patient = getLinkedPatient(req.user.id);
   if (!patient) return sendError(req, res, 404, "NOT_FOUND", "No linked patient found.");
   sendOk(req, res, { patient }, 200, { domain: "iam" });
+});
+
+// ═══════════════════════════════════════════════
+// ── JOURNALS: Patient Journaling System ──
+// ═══════════════════════════════════════════════
+
+// Patient: create journal entry
+app.post("/api/journals", requireAuth, requireRole(ROLES.PATIENT), async (req, res) => {
+  try {
+    const { type, content, voiceMetrics, wearableData } = req.body || {};
+    if (!content && !voiceMetrics && !wearableData) {
+      return sendError(req, res, 400, "EMPTY_JOURNAL", "Journal entry cannot be empty.");
+    }
+
+    // Analyze content for sentiment
+    const sentiment = content ? analyzeJournalContent(content) : null;
+
+    const entry = createJournalEntry({
+      userId: req.user.id,
+      anonymousId: req.user.anonymousId,
+      type: type || 'text',
+      content,
+      voiceMetrics,
+      wearableData,
+      sentiment,
+    });
+
+    // Generate AI suggestions based on sentiment + any prior doctor assessments
+    const allEntries = getJournalsByAnonymousId(req.user.anonymousId);
+    const doctorAssessments = allEntries.flatMap(e => e.doctorAssessments || []);
+    const suggestionResult = generateSuggestionsForPatient(sentiment, doctorAssessments);
+
+    // Attach suggestions to the entry
+    if (suggestionResult) {
+      addAiSuggestions(entry.id, suggestionResult);
+    }
+
+    // Check if we should suggest consultation
+    const stats = getPatientJournalStats(req.user.anonymousId);
+    const consultSuggestion = shouldSuggestConsultation(stats);
+
+    sendOk(req, res, {
+      journal: { ...entry, aiSuggestions: suggestionResult?.suggestions || [] },
+      encouragement: suggestionResult?.message || null,
+      consultation: consultSuggestion,
+      stats: stats ? { totalEntries: stats.totalEntries, avgSentiment: stats.avgSentiment, declining: stats.declining } : null,
+    }, 201, { domain: "journals" });
+  } catch (err) {
+    sendError(req, res, 500, "JOURNAL_ERROR", err.message);
+  }
+});
+
+// Patient: get own journals
+app.get("/api/journals/mine", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  const limit = parseInt(req.query.limit) || 50;
+  const entries = getJournalsByUserId(req.user.id, limit);
+  const stats = getPatientJournalStats(req.user.anonymousId);
+  const consultSuggestion = shouldSuggestConsultation(stats);
+
+  sendOk(req, res, {
+    journals: entries,
+    total: entries.length,
+    anonymousId: req.user.anonymousId,
+    stats,
+    consultation: consultSuggestion,
+  }, 200, { domain: "journals" });
+});
+
+// Patient: decline consultation
+app.post("/api/journals/decline-consult", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  const { reason } = req.body || {};
+  // Just acknowledge — we track the reason but respect the decision
+  sendOk(req, res, {
+    message: "That's completely okay. We're here whenever you're ready. 💚",
+    reasonTracked: !!reason,
+  }, 200, { domain: "journals" });
+});
+
+// ═══════════════════════════════════════════════
+// ── DOCTOR: Anonymized Journal Reader ──
+// ═══════════════════════════════════════════════
+
+// Doctor: get queue of anonymous patients with journals
+app.get("/api/doctor/queue", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const patients = listAnonymousJournalPatients();
+  sendOk(req, res, { patients, total: patients.length }, 200, { domain: "doctor" });
+});
+
+// Doctor: read journals for a specific anonymous ID (NO real identity exposed)
+app.get("/api/doctor/journals/:anonymousId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const { anonymousId } = req.params;
+  const limit = parseInt(req.query.limit) || 30;
+  const entries = getJournalsByAnonymousId(anonymousId, limit);
+  const stats = getPatientJournalStats(anonymousId);
+
+  sendOk(req, res, {
+    anonymousId,
+    journals: entries,
+    total: entries.length,
+    stats,
+  }, 200, { domain: "doctor" });
+});
+
+// Doctor: submit assessment for a journal entry
+app.post("/api/doctor/assess/:entryId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const { entryId } = req.params;
+  const { depressionScore, stressLevel, anxietyLevel, clinicalNotes, recommendsConsultation } = req.body || {};
+
+  if (depressionScore === undefined || stressLevel === undefined || anxietyLevel === undefined) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "depressionScore, stressLevel, and anxietyLevel are required (0-10 scale).");
+  }
+
+  const assessment = {
+    doctorId: req.user.id,
+    doctorType: req.user.doctorType || 'general',
+    depressionScore: Math.min(10, Math.max(0, Number(depressionScore))),
+    stressLevel: Math.min(10, Math.max(0, Number(stressLevel))),
+    anxietyLevel: Math.min(10, Math.max(0, Number(anxietyLevel))),
+    clinicalNotes: clinicalNotes || '',
+    recommendsConsultation: !!recommendsConsultation,
+  };
+
+  const updated = addDoctorAssessment(entryId, assessment);
+  if (!updated) {
+    return sendError(req, res, 404, "NOT_FOUND", "Journal entry not found.");
+  }
+
+  sendOk(req, res, { entry: updated }, 200, { domain: "doctor" });
+});
+
+// ═══════════════════════════════════════════════
+// ── CHV: Community Health Volunteer Routes ──
+// ═══════════════════════════════════════════════
+
+// CHV: create a patient account (Mini Admin privilege)
+app.post("/api/chv/create-patient", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), (req, res) => {
+  const { email, password, fullName, phone } = req.body || {};
+  if (!email || !password || !fullName) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "email, password, and fullName are required.");
+  }
+
+  const result = createUser({
+    email,
+    password,
+    fullName,
+    role: ROLES.PATIENT, // CHVs can only create patient accounts
+    phone,
+    createdBy: req.user.id,
+  });
+
+  if (result.error) {
+    return sendError(req, res, 409, result.error, result.message);
+  }
+  sendOk(req, res, result, 201, { domain: "chv" });
+});
+
+// CHV: list patients they created
+app.get("/api/chv/my-patients", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), (req, res) => {
+  const allPatients = listUsers(ROLES.PATIENT);
+  const myPatients = allPatients.filter(p => p.createdBy === req.user.id);
+  sendOk(req, res, { patients: myPatients, total: myPatients.length }, 200, { domain: "chv" });
 });
 
 // 404 catch-all (MUST be last)

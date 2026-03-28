@@ -9,11 +9,12 @@
 
 # AegisSpeak - AI Mental Health Copilot
 
-Predictive, personalized, privacy-first mental health support across mobile, web, and backend APIs.
+A journaling-first mental health platform with an anonymous pipeline connecting patients, doctors, and community health volunteers. Users journal daily; doctors review anonymized data; AI provides gentle habit suggestions — never diagnoses.
 
-AegisSpeak is designed for Nepal-US Hackathon 2026 problem statements:
+Built for Nepal-US Hackathon 2026:
 - Reduce career pressure, burnout, and uncertainty for students and professionals.
 - Lower stigma and improve early support in conservative communities.
+- Digitize community health volunteer door-to-door screening.
 - Provide free, confidential counseling services (MIT Health–inspired).
 
 ---
@@ -27,16 +28,23 @@ AegisSpeak is designed for Nepal-US Hackathon 2026 problem statements:
   - **Backend API** (Express + Gemini integration + local JSON persistence).
 
 ### Identity & Access Management (IAM)
-- **Super Admin–controlled IAM system** — only super admin can create user accounts.
-- **Role-based access control (RBAC)** with 4 user types:
-  - 🛡️ **Super Admin** — Full system access, user management, compliance, analytics.
-  - 🩺 **Doctor** (psychiatrist, psychologist, general) — Clinical triage, patient records, prescriptions.
-  - 🧑 **Mental Patient** — Check-ins, AI copilot, journaling, milestones, counseling.
+- **Super Admin–controlled IAM system** — only super admin (and CHVs for patients) can create accounts.
+- **Role-based access control (RBAC)** with 5 user types:
+  - 🛡️ **Super Admin** — Full system access, user management, compliance, doctor verification.
+  - 🩺 **Doctor** (psychiatrist, psychologist, general) — Reads anonymized journals by ID, rates conditions, consults. **Pays to onboard.**
+  - 🧑 **Patient** — Daily journaling (text/voice/wearable), receives AI habit suggestions, opts into doctor consultation. **Pays on consult only.**
   - 👨‍👩‍👧 **Guardian** — Read-only linked patient monitoring, alerts, care team contact.
+  - 👩‍⚕️ **CHV (Community Health Volunteer)** — Mini Admin: creates patient accounts, door-to-door screening, follow-up tracking.
+- **Anonymous IDs** — Patients get `JRN-XXXX` format IDs. Doctors NEVER see real names.
 - **JWT authentication** with secure bcrypt password hashing.
-- **Login portal** with role selector, demo credentials, password visibility toggle.
-- **Access control matrix** showing feature permissions per role.
-- **User directory** with search, filter, enable/disable, and delete.
+
+### Journaling System (Core Product)
+- **Multi-input journaling**: text, voice, wearable data, scheduled calls.
+- **AI sentiment analysis** on each entry (keyword-based + extensible to Gemini).
+- **AI gentle suggestions**: music, articles, exercises, breathing — **NEVER diagnoses**.
+- **Doctor anonymous reader**: views journals by anonymous ID, rates depression/stress/anxiety.
+- **Decline detection**: AI monitors 1-month patterns and gently asks "Would you like to meet a doctor?"
+- **Right to reject**: Patient can decline consultation — reason tracked but respected.
 
 ### Counseling Services (MIT Health–Inspired)
 - **Individual therapy** sessions with licensed therapists.
@@ -111,51 +119,34 @@ Nepal-US-Hackathon-2026/
 │   ├── data/
 │   │   ├── checkins.json
 │   │   ├── escalations.json
-│   │   └── users.json            ← IAM user store
+│   │   ├── journals.json          ← Journal entries (anonymous pipeline)
+│   │   └── users.json             ← IAM user store (with anonymousIds)
 │   └── src/
-│       ├── index.js               ← Express app + IAM endpoints
+│       ├── index.js                ← Express app + all API routes
 │       ├── lib/
-│       │   ├── auth.js            ← JWT + RBAC middleware
+│       │   ├── auth.js             ← JWT + RBAC middleware
 │       │   ├── gemini.js
 │       │   ├── insights.js
 │       │   ├── interventions.js
 │       │   ├── scoring.js
 │       │   ├── security.js
+│       │   ├── suggestions.js      ← AI gentle suggestion engine
 │       │   └── transport.js
 │       └── store/
 │           ├── checkinStore.js
 │           ├── escalationStore.js
-│           └── userStore.js       ← User CRUD + seed admin
+│           ├── journalStore.js     ← Journal CRUD + anonymous reader
+│           └── userStore.js        ← User CRUD + CHV + anonymous IDs
 ├── frontend/
-│   ├── App.tsx
-│   ├── package.json
-│   └── src/
-│       ├── api.ts
-│       ├── components.tsx
-│       ├── constants.ts
-│       ├── mockData.ts
-│       ├── theme.ts
-│       ├── types.ts
-│       └── screens/
-│           ├── AlertsScreen.tsx
-│           ├── CheckinScreen.tsx
-│           ├── ClinicianScreen.tsx
-│           ├── CommunityScreen.tsx
-│           ├── ComplianceScreen.tsx
-│           ├── CopilotScreen.tsx
-│           ├── InsightsScreen.tsx
-│           ├── MilestonesScreen.tsx
-│           ├── PrivacyScreen.tsx
-│           ├── SignalsScreen.tsx
-│           ├── TriageScreen.tsx
-│           ├── VaultScreen.tsx
-│           └── WipeLogScreen.tsx
+│   └── ... (Expo React Native)
+├── scripts/
+│   └── seed_demo.py               ← Python demo data generator
 ├── web/
-│   ├── app.js                     ← Core SPA logic + navigation
-│   ├── features.js                ← Enhanced modules
-│   ├── iam.js                     ← IAM login + admin panel + counseling
-│   ├── index.html                 ← Main entry point
-│   └── styles.css                 ← Design system + IAM styles
+│   ├── app.js
+│   ├── features.js
+│   ├── iam.js                      ← Login + admin panel + counseling
+│   ├── index.html
+│   └── styles.css
 └── README.md
 ```
 
@@ -184,6 +175,15 @@ Backend runs on `http://localhost:4000` and serves the web app from the same ori
 |-------|-------|
 | Email | `admin@aegisspeak.com` |
 | Password | `AegisAdmin@2026` |
+
+### 3) Seed Demo Data (optional)
+
+```bash
+pip install requests
+python3 scripts/seed_demo.py
+```
+
+This creates 5 patients, 2 doctors, 1 CHV, 50+ journal entries, and doctor assessments.
 
 ### 2) Mobile (Expo)
 
@@ -237,6 +237,26 @@ Then press:
 | POST | `/api/escalations` | Create escalation |
 | GET | `/api/users/:userId/escalations` | List escalations |
 
+### Journaling (Patient only)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/journals` | Create journal entry (text/voice/wearable) → returns AI suggestions |
+| GET | `/api/journals/mine` | Get own journals + stats + consultation suggestion |
+| POST | `/api/journals/decline-consult` | Decline doctor consultation (reason tracked) |
+
+### Doctor (Anonymized Reader)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/doctor/queue` | Get queue of anonymous patient IDs with journal counts |
+| GET | `/api/doctor/journals/:anonymousId` | Read journals for an anonymous ID (NO real identity) |
+| POST | `/api/doctor/assess/:entryId` | Submit assessment (depression, stress, anxiety scores) |
+
+### CHV (Community Health Volunteer)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/chv/create-patient` | Create patient account (Mini Admin privilege) |
+| GET | `/api/chv/my-patients` | List patients created by this CHV |
+
 ---
 
 ## UX Modes (Web)
@@ -256,23 +276,28 @@ Then press:
 
 ## User Roles & Access Matrix
 
-| Feature | 🛡️ Admin | 🩺 Doctor | 🧑 Patient | 👨‍👩‍👧 Guardian |
-|---------|----------|----------|-----------|-----------|
-| IAM User Management | ✅ | ❌ | ❌ | ❌ |
-| AI Copilot Chat | ✅ | ✅ | ✅ | ❌ |
-| Daily Check-In | ✅ | ✅ | ✅ | ❌ |
-| Clinical Triage | ✅ | ✅ | ❌ | ❌ |
-| Patient Records | ✅ | ✅ | Own only | Linked only |
-| Counseling Services | ✅ | ✅ | ✅ | ✅ |
-| Medication Management | ✅ | ✅ | View only | View only |
-| Emergency Escalation | ✅ | ✅ | ✅ | ✅ |
-| Compliance & Audit | ✅ | View only | ❌ | ❌ |
+| Feature | 🛡️ Admin | 🩺 Doctor | 🧑 Patient | 👨‍👩‍👧 Guardian | 👩‍⚕️ CHV |
+|---------|----------|----------|-----------|-----------|---------|
+| IAM User Management | ✅ | ❌ | ❌ | ❌ | Patients only |
+| Journaling | ✅ | ❌ | ✅ (own) | ❌ | ❌ |
+| Anonymous Journal Reader | ✅ | ✅ (by ID) | ❌ | ❌ | ❌ |
+| Doctor Assessments | ✅ | ✅ | ❌ | ❌ | ❌ |
+| AI Suggestions | ✅ | ❌ | ✅ (auto) | ❌ | ❌ |
+| Counseling Services | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Patient Records | ✅ | Anonymous only | Own only | Linked only | Created only |
+| Emergency Escalation | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Screening (door-to-door) | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Compliance & Audit | ✅ | View only | ❌ | ❌ | ❌ |
 
 ---
 
 ## Hackathon Value
 
 AegisSpeak is built for low-resource, stigma-sensitive contexts:
+- 📝 **Journaling-first** — no clinical language, just daily reflections
+- 🔒 **Anonymous pipeline** — doctors never see patient names, only `JRN-XXXX` IDs
+- 🤖 **AI never diagnoses** — only suggests music, articles, exercises, breathing
+- 👩‍⚕️ **CHV integration** — digitalized door-to-door screening (FCHV model)
 - 🌐 Multilingual support (English, Nepali, Hindi paths)
 - 📶 Offline-friendly workflows
 - 📲 SMS/USSD fallback support
@@ -284,3 +309,4 @@ AegisSpeak is built for low-resource, stigma-sensitive contexts:
   <strong>Built for Nepal-US Hackathon 2026</strong><br/>
   <em>Mental health support that is early, private, and actionable.</em>
 </p>
+
