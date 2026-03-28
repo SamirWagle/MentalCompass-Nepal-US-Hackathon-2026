@@ -83,31 +83,41 @@ function getNavItem(screen) {
 function navigateToScreen(screen, opts = {}) {
   const { updateHash = true } = opts;
   const item = getNavItem(screen);
-  if (!item) return;
 
-  const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only');
-  if (hiddenByMode) {
-    const fallback = getNavItem('dashboard');
-    if (fallback) return navigateToScreen('dashboard', { updateHash });
-    return;
+  // Allow navigation even without a static nav item (IAM injected screens)
+  const screenEl = document.getElementById(`screen-${screen}`);
+  if (!item && !screenEl) return;
+
+  if (item) {
+    const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only');
+    if (hiddenByMode) {
+      const fallback = getNavItem('dashboard');
+      if (fallback) return navigateToScreen('dashboard', { updateHash });
+      return;
+    }
   }
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  item.classList.add('active');
+  if (item) item.classList.add('active');
+
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active');
-    // Failsafe: enforce visibility at style level so only one screen is shown.
     s.style.display = 'none';
   });
-  const el = document.getElementById(`screen-${screen}`);
-  if (el) {
-    el.classList.add('active');
-    el.style.display = 'block';
+  if (screenEl) {
+    screenEl.classList.add('active');
+    screenEl.style.display = 'block';
   }
 
   if (updateHash) {
     const next = `#${screen}`;
     if (window.location.hash !== next) window.location.hash = next;
+  }
+
+  // Auto-close mobile sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
   }
 }
 
@@ -130,6 +140,26 @@ if (initialHashScreen) {
   navigateToScreen(initialHashScreen, { updateHash: false });
 } else {
   navigateToScreen('dashboard', { updateHash: false });
+}
+
+// ── Mobile Menu Toggle ──
+const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('open');
+    }
+  });
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('open') &&
+        !sidebar.contains(e.target) &&
+        e.target !== mobileMenuBtn) {
+      sidebar.classList.remove('open');
+    }
+  });
 }
 
 function buildMoodHistory(seed) {
