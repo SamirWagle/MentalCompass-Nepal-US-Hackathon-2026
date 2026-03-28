@@ -1,0 +1,37 @@
+// Apple-inspired design language with clear hierarchy and restrained accents.
+export const theme = {
+  bg: "#f3f5f9",
+  bgElevated: "#ffffff",
+  bgSecondary: "#eef2f7",
+  surface: "#f7f9fc",
+  surfaceGlass: "rgba(255,255,255,0.76)",
+  card: "rgba(255,255,255,0.92)",
+  cardBorder: "rgba(15,23,42,0.08)",
+  divider: "rgba(15,23,42,0.06)",
+  accent: "#0a84ff",
+  accentDim: "rgba(10,132,255,0.12)",
+  success: "#30d158",
+  warning: "#ff9f0a",
+  danger: "#ff453a",
+  text: "#1c1c1e",
+  textMuted: "#3a3a3c",
+  textDim: "#6e6e73",
+  white: "#ffffff",
+  heroGradient: ["#ecf3ff", "#ffffff", "#f5f7fc"] as string[],
+  accentGradient: ["#0a84ff", "#5ac8fa"] as string[],
+  dangerGradient: ["#ff453a", "#ff9f8f"] as string[],
+  shadowSoft: "rgba(17,24,39,0.08)",
+  shadowStrong: "rgba(17,24,39,0.15)",
+  radiusSm: 12,
+  radiusMd: 16,
+  radiusLg: 22,
+  radiusXl: 28,
+};
+
+export const fonts = {
+  regular: { fontFamily: "System", fontWeight: "400" as const },
+  medium: { fontFamily: "System", fontWeight: "500" as const },
+  semibold: { fontFamily: "System", fontWeight: "600" as const },
+  bold: { fontFamily: "System", fontWeight: "700" as const },
+  heavy: { fontFamily: "System", fontWeight: "800" as const },
+};

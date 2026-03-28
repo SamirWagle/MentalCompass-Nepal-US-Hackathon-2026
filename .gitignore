@@ -20,3 +20,30 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+coverage/
+backend/data/*.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+
+# OS files
+.DS_Store
+Thumbs.db
