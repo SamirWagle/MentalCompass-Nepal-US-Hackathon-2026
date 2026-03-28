@@ -70,10 +70,13 @@ import { analyzePatientJourney, shouldTriggerConsultationAlert } from "./lib/aiA
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const isServerlessRuntime = process.env.VERCEL === "1" || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 // Ensure uploads directory exists for voice journals
 const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+if (!isServerlessRuntime) {
+  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -835,8 +838,12 @@ app.use((req, res) => {
 // Seed super admin and start
 const adminAccount = seedSuperAdmin();
 
-app.listen(port, () => {
-  console.log(`AegisSpeak backend listening on :${port}`);
-  console.log(`AI mode: ${process.env.GEMINI_API_KEY ? "Gemini active" : "Template fallback"}`);
-  console.log(`IAM: Super admin seeded (admin@aegisspeak.com)`);
-});
+if (!isServerlessRuntime) {
+  app.listen(port, () => {
+    console.log(`AegisSpeak backend listening on :${port}`);
+    console.log(`AI mode: ${process.env.GEMINI_API_KEY ? "Gemini active" : "Template fallback"}`);
+    console.log(`IAM: Super admin seeded (admin@aegisspeak.com)`);
+  });
+}
+
+export default app;
