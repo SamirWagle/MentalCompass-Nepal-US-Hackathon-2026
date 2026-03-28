@@ -1,0 +1,20 @@
+[
+  {
+    "id": "352e2530-0a03-4e9e-8186-5715a1213e32",
+    "anonymousId": null,
+    "email": "admin@aegisspeak.com",
+    "password": "$2b$10$3UKnROhuG92EKcMWy.9axeYC2E5yzIaLcGd0JdrKxxUT86xbT9I3S",
+    "fullName": "System Administrator",
+    "role": "super_admin",
+    "isActive": true,
+    "createdAt": "2026-03-28T15:05:57.716Z",
+    "createdBy": "system",
+    "linkedPatientId": null,
+    "doctorType": null,
+    "phone": "",
+    "avatar": "🛡️",
+    "consentGiven": true,
+    "consentAt": "2026-03-28T15:05:57.722Z",
+    "subscription": null
+  }
+]

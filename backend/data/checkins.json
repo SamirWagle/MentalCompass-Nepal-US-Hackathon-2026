@@ -1,0 +1,48 @@
+[
+  {
+    "id": "17bc7392-056f-46d5-a480-c687ae75873d",
+    "userId": "demo-user-nepal",
+    "timestamp": "2026-03-28T12:25:44.997Z",
+    "input": {
+      "userId": "demo-user-nepal",
+      "roleContext": "student",
+      "mood": 5,
+      "anxiety": 4,
+      "stress": 10,
+      "sleepHours": 7,
+      "phoneUsageHours": 4,
+      "typingSpeedDelta": 0.1,
+      "speechRateWpm": 125,
+      "pauseRatio": 0.2,
+      "jitter": 0.02,
+      "sentiment": 0,
+      "deadlinePressure": 5,
+      "roleUncertainty": 5,
+      "financialStress": 4,
+      "belongingSafety": 6,
+      "stigmaSafePreferred": true,
+      "trustedContact": "",
+      "crisisSignals": [],
+      "journalText": ""
+    },
+    "score": 51,
+    "riskLevel": "moderate",
+    "trend": {
+      "trend": "insufficient-data",
+      "delta": 0
+    },
+    "summary": {
+      "impression": "Risk level is moderate with score 51/100.",
+      "highlights": [
+        "Mood: 5/10, Anxiety: 4/10, Stress: 10/10.",
+        "Career load — Deadline: 5/10, Uncertainty: 5/10, Financial: 4/10, Belonging safety: 6/10.",
+        "Sleep: 7h, Phone usage: 4h, Speech rate: 125 WPM.",
+        "Trend status: insufficient-data (delta 0).",
+        "Language should emphasize stress load and wellbeing support to reduce stigma barriers."
+      ],
+      "recommendedPlan": "Continue daily check-ins and CBT micro-interventions.",
+      "escalation": false
+    },
+    "escalation": false
+  }
+]
