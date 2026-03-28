@@ -424,8 +424,35 @@ const WEB_DUMMY_ESCALATIONS = CLINICIAN_MOCK_ALERTS
     contacts: ['trusted-contact-1', 'local-health-post']
   }));
 
-function initClinicianDashboard() {
-  if (!state.clinicianPatients.length) state.clinicianPatients = CLINICIAN_MOCK_PATIENTS;
+async function initClinicianDashboard() {
+  // Try live API for doctor queue
+  if (!state.clinicianPatients.length) {
+    try {
+      const session = window.__aegisSession;
+      if (session?.token && (session?.user?.role === 'doctor' || session?.user?.role === 'super_admin')) {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch('http://localhost:4000/api/doctor/queue', { headers: hdrs });
+        const json = await res.json();
+        if (json.ok && json.data?.queue?.length) {
+          state.clinicianPatients = json.data.queue.map((q, i) => ({
+            id: q.anonymousId || `live-${i}`,
+            name: `Patient ${q.anonymousId || i}`,
+            age: '—', gender: '—',
+            location: 'Remote',
+            riskLevel: q.riskLevel || (q.latestRisk >= 70 ? 'high' : q.latestRisk >= 40 ? 'moderate' : 'low'),
+            score: q.latestRisk || q.entryCount * 10 || 50,
+            streak: q.entryCount || 1,
+            adherence: Math.min(100, (q.entryCount || 1) * 20),
+            summary: `${q.entryCount || 0} journal entries · Anonymous ID: ${q.anonymousId || 'N/A'}`,
+            assignedDate: new Date().toISOString().slice(0,10),
+            liveAlertCopy: 'No active alert'
+          }));
+        }
+      }
+    } catch {}
+    // Fallback to mock if API returned nothing
+    if (!state.clinicianPatients.length) state.clinicianPatients = CLINICIAN_MOCK_PATIENTS;
+  }
   if (!state.clinicianAlerts.length) state.clinicianAlerts = CLINICIAN_MOCK_ALERTS.map(a => ({ ...a }));
 
   const search = document.getElementById('clinician-search');

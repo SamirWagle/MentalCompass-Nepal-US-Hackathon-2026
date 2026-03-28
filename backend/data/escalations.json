@@ -1,0 +1,15 @@
+[
+  {
+    "id": "4c8d2049-7ef6-4599-abd5-5e27db2bbd3c",
+    "timestamp": "2026-03-28T12:25:42.148Z",
+    "userId": "demo-user-nepal",
+    "severity": "high",
+    "reason": "manual-emergency-trigger",
+    "contacts": [
+      "trusted-contact-1",
+      "local-health-post"
+    ],
+    "acknowledged": false,
+    "auditHash": "b3fdc7e62b9fa49ff6eb8bef76bca12940dd0bcf3264cc54de83023894d36dd4"
+  }
+]
