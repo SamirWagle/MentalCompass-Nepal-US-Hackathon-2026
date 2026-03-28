@@ -72,7 +72,7 @@
       </a>
 
       <div class="nav-section-label full-only">Provider</div>
-      <a class="nav-item full-only" data-screen="clinician" href="#">
+      <a class="nav-item" data-screen="clinician" href="#">
         <span class="nav-icon">🏥</span><span class="nav-label">Clinician</span>
       </a>
       <a class="nav-item full-only" data-screen="triage" href="#">
@@ -570,46 +570,161 @@
 
     <!-- ═══ CLINICIAN ═══ -->
     <div class="screen" id="screen-clinician">
-      <div class="section-heading"><div><div class="section-title">Clinician Dashboard</div><div class="section-subtitle">Remote triage · AI-generated clinical summaries</div></div>
-        <div style="display:flex;gap:8px;">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">Clinician Dashboard</div>
+          <div class="section-subtitle">Nature-inspired, low-cognitive-load triage center</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-outline btn-sm" id="btn-export-pdf">📄 Export PDF</button>
           <button class="btn btn-outline btn-sm" id="btn-export-csv">📊 Export CSV</button>
           <button class="btn btn-outline btn-sm" id="btn-refresh-clinician">🔄 Refresh</button>
         </div>
       </div>
 
-      <!-- Clinician Stats Overview -->
-      <div class="grid-4 gap-24 mb-24" id="clinician-stats">
-        <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-value" style="color:var(--accent)">6</div><div class="metric-label">Active Patients</div></div>
-        <div class="metric-card"><div class="metric-icon">🔴</div><div class="metric-value" style="color:var(--danger)">2</div><div class="metric-label">High Risk</div></div>
-        <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-value" style="color:var(--success)">67%</div><div class="metric-label">Avg Adherence</div></div>
-        <div class="metric-card"><div class="metric-icon">⏱️</div><div class="metric-value" style="color:var(--warning)">12m</div><div class="metric-label">Last Check-in</div></div>
-      </div>
-
-      <!-- Session Summary Card -->
-      <div class="glass-card mb-24">
-        <div class="card-title">AI-Generated Session Summaries</div>
-        <div class="card-subtitle">Latest patient interaction insights synthesized by Gemini</div>
-        <div id="clinician-session-summaries"></div>
-      </div>
-
-      <div class="grid-2 gap-24 mb-24">
-        <div class="glass-card">
-          <div class="card-title">Patient Records</div>
-          <div class="card-subtitle">Recent check-in history with risk assessment</div>
-          <div id="clinician-records"><div style="color:var(--text-muted);padding:20px;text-align:center;">No clinical records synced yet.</div></div>
+      <div class="glass-card mb-24 clinician-alert-bar">
+        <div>
+          <div class="card-title" style="margin-bottom:2px;">Emergency Notification Center</div>
+          <div class="card-subtitle">High-risk events requiring immediate review</div>
         </div>
-        <div class="glass-card">
-          <div class="card-title">Adherence Overview</div>
-          <div class="card-subtitle">Patient compliance with prescribed interventions</div>
-          <div id="clinician-adherence"></div>
-        </div>
+        <button class="btn btn-danger" id="btn-clin-alerts-toggle" style="min-width:190px;">🚨 <span id="clinician-alert-count">0 Critical Alerts</span></button>
+      </div>
+      <div class="glass-card mb-24" id="clinician-alerts-drawer" style="display:none;">
+        <div class="card-title">Active Alerts Queue</div>
+        <div id="clinician-alert-list"></div>
       </div>
 
-      <div class="glass-card">
-        <div class="card-title">Latest Clinical Notes</div>
-        <div class="card-subtitle">AI-generated structured summary (RAG-ready)</div>
-        <div id="clinician-summary"><div style="color:var(--text-muted);padding:20px;text-align:center;">Run a patient check-in to generate clinical notes.</div></div>
+      <div class="clinician-layout">
+        <div class="glass-card clinician-master">
+          <div class="card-title">Patient Triage List</div>
+          <div class="card-subtitle">Search and filter by risk and assigned date</div>
+          <input class="text-area clinician-search" id="clinician-search" placeholder="Search patient by name or location" style="min-height:48px;resize:none;" />
+          <div class="clinician-filter-row" id="clinician-risk-filters" style="margin-top:10px;">
+            <button class="chip active" data-risk="all">All</button>
+            <button class="chip" data-risk="high" style="border-color:var(--danger);color:var(--danger);">Severe</button>
+            <button class="chip" data-risk="moderate" style="border-color:var(--warning);color:var(--warning);">Monitor</button>
+            <button class="chip" data-risk="low" style="border-color:var(--success);color:var(--success);">Stable</button>
+          </div>
+          <div class="clinician-filter-row" id="clinician-date-filters" style="margin-top:8px;">
+            <button class="chip active" data-date="all">Any Date</button>
+            <button class="chip" data-date="7">Assigned 7d</button>
+            <button class="chip" data-date="30">Assigned 30d</button>
+          </div>
+          <div id="clinician-patient-list" style="margin-top:12px;"></div>
+        </div>
+
+        <div class="glass-card clinician-detail">
+          <div class="clinician-profile-header">
+            <div>
+              <div class="section-title" id="clinician-active-name" style="font-size:24px;">—</div>
+              <div class="section-subtitle" id="clinician-active-meta">—</div>
+            </div>
+            <div class="clinician-kpi-row">
+              <div class="clinician-kpi-pill"><span>Streak</span><strong id="clinician-active-streak">—</strong></div>
+              <div class="clinician-kpi-pill"><span>Adherence</span><strong id="clinician-active-adherence">—</strong></div>
+            </div>
+          </div>
+
+          <div class="record-item clinician-live-alert" style="margin-top:14px;">
+            <div class="card-title" id="clinician-live-alert-title" style="font-size:16px;color:var(--danger);">Live Emergency Alert - Patient</div>
+            <div class="record-body" id="clinician-live-alert-copy">Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn-danger" id="btn-contact-patient">Contact Patient Immediately</button>
+              <button class="btn btn-outline" id="btn-review-summary">Review Full Summary</button>
+            </div>
+          </div>
+
+          <div class="record-item mb-24" id="clinician-summary-section">
+            <div class="card-title" style="font-size:18px;">Clinical Summary - <span id="clinician-summary-patient">Patient A-2847</span></div>
+            <div class="card-subtitle">Latest Voice Check-In Summary</div>
+            <div class="record-body" id="clinician-voice-summary">
+              Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.
+            </div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);" id="clinician-generated-at">Generated: March 24, 2026 at 2:23 PM</div>
+          </div>
+
+          <div class="grid-2 gap-24 mb-24" style="margin-top:16px;">
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">Mood History (Past 7 Days)</div>
+              <div class="card-subtitle" id="clinician-mood-subtitle">3/18 · 3/19 · 3/20 · 3/21 · 3/22 · 3/23 · 3/24</div>
+              <div class="bar-chart" id="clinician-mood-chart"></div>
+            </div>
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">Current Medications</div>
+              <div class="card-subtitle">Active medication schedule</div>
+              <div id="clinician-medications"></div>
+            </div>
+          </div>
+
+          <div class="grid-2 gap-24 mb-24">
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">Anxiety vs Sleep (7-Day Pattern)</div>
+              <div class="card-subtitle">Dual trend bars for stress physiology monitoring</div>
+              <div class="bar-chart" id="clinician-vitals-chart"></div>
+            </div>
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">Recovery Signals</div>
+              <div class="card-subtitle">Goal progress, support reach-outs, and engagement</div>
+              <div id="clinician-recovery-chart"></div>
+            </div>
+          </div>
+
+          <div class="grid-2 gap-24 mb-24">
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">AI Session Summaries</div>
+              <div class="card-subtitle">Recent chat-derived clinical cues</div>
+              <div id="clinician-ai-summaries"></div>
+            </div>
+            <div class="record-item">
+              <div class="card-title" style="font-size:16px;">Activity Metrics</div>
+              <div class="card-subtitle">Check-ins, completion, treatment days, risk level</div>
+              <div id="clinician-activity-metrics"></div>
+            </div>
+          </div>
+
+          <div class="record-item mb-24">
+            <div class="card-title" style="font-size:16px;">Intervene &amp; Assign</div>
+            <div class="card-subtitle">Assign New Milestone</div>
+            <div class="grid-3 gap-24" style="margin-bottom:10px;">
+              <div>
+                <div class="form-label">Milestone</div>
+                <select id="clinician-milestone-select" class="text-area" style="min-height:48px;resize:none;">
+                  <option>Complete 3 days of journaling</option>
+                  <option>Practice breathing for 7 days</option>
+                  <option>Daily check-in streak (5 days)</option>
+                </select>
+              </div>
+              <div>
+                <div class="form-label">Learning Vault Resource</div>
+                <select id="clinician-resource-select" class="text-area" style="min-height:48px;resize:none;">
+                  <option>Audio: Grounding Techniques</option>
+                  <option>Video: 4-7-8 Breathing</option>
+                  <option>Article: Work Anxiety Reset</option>
+                </select>
+              </div>
+              <div>
+                <div class="form-label">Journal Prompt</div>
+                <input id="clinician-journal-prompt" class="text-area" style="min-height:48px;resize:none;" value="Enter a new milestone or task for the patient (e.g., Practice deep breathing for 10 minutes daily)" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="btn-push-patient">📤 Push to Patient's Mobile App</button>
+              <button class="btn btn-ghost" id="btn-save-draft">💾 Save as Draft</button>
+              <div id="clinician-push-status" style="font-size:13px;color:var(--text-muted);">No pending push.</div>
+            </div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">This milestone will instantly appear in the patient's "Milestones &amp; Rewards" section.</div>
+          </div>
+
+          <div class="record-item">
+            <div class="card-title" style="font-size:16px;">Data Compliance &amp; Security Monitor</div>
+            <div class="grid-3 gap-24" style="margin-top:12px;">
+              <div class="spec-item"><div class="spec-label">Encryption Status</div><div class="spec-value" style="color:var(--success);">Active</div></div>
+              <div class="spec-item"><div class="spec-label">Voice Files Stored</div><div class="spec-value" style="color:var(--accent);">0 (None)</div></div>
+              <div class="spec-item"><div class="spec-label">HIPAA Compliant</div><div class="spec-value" style="color:var(--success);">Verified</div></div>
+            </div>
+            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">Security Confirmation: All incoming patient data is end-to-end encrypted. Biometric voice files are automatically deleted after text summary generation. Only clinical summaries are stored on secure servers. Last security audit: March 20, 2026.</div>
+          </div>
+        </div>
       </div>
     </div>
 

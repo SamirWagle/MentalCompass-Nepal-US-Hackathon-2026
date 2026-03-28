@@ -26,6 +26,16 @@ const state = {
   escalations: [],
   avatarXp: 18,
   stability: 68,
+  clinicianUi: {
+    riskFilter: 'all',
+    dateFilter: 'all',
+    query: '',
+    activePatientId: 'p-a-2847',
+    alertsOpen: false,
+    pushSuccess: false,
+  },
+  clinicianPatients: [],
+  clinicianAlerts: [],
 };
 
 function applyUxMode(mode) {
@@ -66,18 +76,435 @@ function initUxModeControls() {
   applyUxMode(state.uxMode);
 }
 
+function getNavItem(screen) {
+  return document.querySelector(`.nav-item[data-screen="${screen}"]`);
+}
+
+function navigateToScreen(screen, opts = {}) {
+  const { updateHash = true } = opts;
+  const item = getNavItem(screen);
+  if (!item) return;
+
+  const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only');
+  if (hiddenByMode) {
+    const fallback = getNavItem('dashboard');
+    if (fallback) return navigateToScreen('dashboard', { updateHash });
+    return;
+  }
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  item.classList.add('active');
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    // Failsafe: enforce visibility at style level so only one screen is shown.
+    s.style.display = 'none';
+  });
+  const el = document.getElementById(`screen-${screen}`);
+  if (el) {
+    el.classList.add('active');
+    el.style.display = 'block';
+  }
+
+  if (updateHash) {
+    const next = `#${screen}`;
+    if (window.location.hash !== next) window.location.hash = next;
+  }
+}
+
 // ── Navigation ──
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', e => {
     e.preventDefault();
-    const screen = item.dataset.screen;
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    item.classList.add('active');
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById(`screen-${screen}`);
-    if (el) el.classList.add('active');
+    navigateToScreen(item.dataset.screen, { updateHash: true });
   });
 });
+
+window.addEventListener('hashchange', () => {
+  const screen = (window.location.hash || '').replace('#', '').trim();
+  if (!screen) return;
+  navigateToScreen(screen, { updateHash: false });
+});
+
+const initialHashScreen = (window.location.hash || '').replace('#', '').trim();
+if (initialHashScreen) {
+  navigateToScreen(initialHashScreen, { updateHash: false });
+} else {
+  navigateToScreen('dashboard', { updateHash: false });
+}
+
+function buildMoodHistory(seed) {
+  const points = [];
+  for (let i = 29; i >= 0; i--) {
+    const base = seed + Math.sin(i / 4) * 1.05 + (i % 5 === 0 ? -0.6 : 0.35);
+    const score = Math.max(1, Math.min(10, Number(base.toFixed(1))));
+    points.push({ day: `D${30 - i}`, score });
+  }
+  return points;
+}
+
+function buildVitalsHistory(anxietySeed, sleepSeed) {
+  const labels = ['3/18', '3/19', '3/20', '3/21', '3/22', '3/23', '3/24'];
+  return labels.map((day, idx) => {
+    const anxiety = Math.max(1, Math.min(10, Number((anxietySeed + Math.sin(idx / 2) * 0.8 + (idx % 3 === 0 ? 0.5 : -0.2)).toFixed(1))));
+    const sleep = Math.max(3, Math.min(9, Number((sleepSeed + Math.cos(idx / 2.2) * 0.7 + (idx % 4 === 0 ? -0.3 : 0.2)).toFixed(1))));
+    return { day, anxiety, sleep };
+  });
+}
+
+const CLINICIAN_MOCK_PATIENTS = [
+  {
+    id: 'p-a-2847',
+    code: 'Patient A-2847',
+    name: 'Patient A-2847',
+    age: 31,
+    gender: 'Female',
+    location: 'Rural Area',
+    assignedDate: '2026-03-24',
+    riskLevel: 'high',
+    streak: 6,
+    adherence: 78,
+    treatmentDays: 45,
+    checkinFrequency: '6/week',
+    moodHistory: [
+      { day: '3/18', score: 6.5 },
+      { day: '3/19', score: 6.2 },
+      { day: '3/20', score: 5.8 },
+      { day: '3/21', score: 5.1 },
+      { day: '3/22', score: 4.8 },
+      { day: '3/23', score: 4.3 },
+      { day: '3/24', score: 4.6 },
+    ],
+    summaryGeneratedAt: 'March 24, 2026 at 2:23 PM',
+    liveAlertCopy: 'Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.',
+    fullVoiceSummary: 'Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.',
+    medications: [
+      { name: 'Sertraline 50mg', dose: 'Daily - Morning' },
+      { name: 'Lorazepam 0.5mg', dose: 'As needed' },
+    ],
+    vitalsHistory: buildVitalsHistory(8.1, 4.9),
+    recoverySignals: [
+      { label: 'Goal Completion', value: 78, color: '#0891b2' },
+      { label: 'Support Reach-outs', value: 66, color: '#16a34a' },
+      { label: 'Therapy Engagement', value: 82, color: '#2563eb' },
+    ],
+    aiSummaries: [
+      'Discussed work anxiety and social isolation as top stressors.',
+      'Breathing exercises are helping and patient remains treatment-engaged.',
+      'No suicidal ideation mentioned in this latest voice check-in.'
+    ]
+  },
+  {
+    id: 'p-002',
+    code: 'Patient B-4172',
+    name: 'Maya Gurung',
+    age: 29,
+    gender: 'Female',
+    location: 'Pokhara',
+    assignedDate: '2026-03-24',
+    riskLevel: 'moderate',
+    streak: 7,
+    adherence: 72,
+    treatmentDays: 31,
+    checkinFrequency: '5/week',
+    summaryGeneratedAt: 'March 27, 2026 at 11:10 AM',
+    liveAlertCopy: 'Patient B-4172 reported escalating workplace uncertainty and evening panic spikes in latest check-in.',
+    fullVoiceSummary: 'Patient described increased rumination about role changes and reduced confidence in team communication. Sleep was inconsistent at 5-6 hours, with improved mornings after guided breathing. Appetite is stable and patient remains engaged in scheduled sessions. No self-harm language detected, but anxiety intensity increased over three days.',
+    medications: [
+      { name: 'Escitalopram 10mg', dose: 'Daily - Morning' },
+      { name: 'Propranolol 10mg', dose: 'Before high-stress events' },
+    ],
+    moodHistory: buildMoodHistory(5.3),
+    vitalsHistory: buildVitalsHistory(7.2, 5.8),
+    recoverySignals: [
+      { label: 'Goal Completion', value: 72, color: '#0891b2' },
+      { label: 'Support Reach-outs', value: 58, color: '#16a34a' },
+      { label: 'Therapy Engagement', value: 81, color: '#2563eb' },
+    ],
+    aiSummaries: [
+      'Discussed work anxiety and role uncertainty.',
+      'Responded well to breathing intervention.',
+      'Needs structured evening decompression routine.'
+    ]
+  },
+  {
+    id: 'p-003',
+    code: 'Patient C-1028',
+    name: 'Rohan Karki',
+    age: 34,
+    gender: 'Male',
+    location: 'Lalitpur',
+    assignedDate: '2026-03-20',
+    riskLevel: 'low',
+    streak: 15,
+    adherence: 91,
+    treatmentDays: 63,
+    checkinFrequency: '7/week',
+    summaryGeneratedAt: 'March 28, 2026 at 8:02 AM',
+    liveAlertCopy: 'Patient C-1028 shows stable baseline with no emergency escalation currently required.',
+    fullVoiceSummary: 'Patient reported improved work-life boundaries and consistent recovery habits. Sleep quality is 7-8 hours nightly, and mood remains steady through high-demand periods. Continues journaling and physical activity with strong adherence. No acute warning phrases detected; maintenance plan is working effectively.',
+    medications: [
+      { name: 'Sertraline 25mg', dose: 'Daily - Morning' },
+      { name: 'Melatonin 3mg', dose: 'Nightly as needed' },
+    ],
+    moodHistory: buildMoodHistory(7.2),
+    vitalsHistory: buildVitalsHistory(3.8, 7.4),
+    recoverySignals: [
+      { label: 'Goal Completion', value: 91, color: '#16a34a' },
+      { label: 'Support Reach-outs', value: 84, color: '#0891b2' },
+      { label: 'Therapy Engagement', value: 93, color: '#2563eb' },
+    ],
+    aiSummaries: [
+      'Stable routine and positive trend continuation.',
+      'High adherence to journaling and sleep targets.',
+      'No acute crisis language in recent sessions.'
+    ]
+  },
+  {
+    id: 'p-004',
+    code: 'Patient D-6391',
+    name: 'Nisha Tamang',
+    age: 20,
+    gender: 'Female',
+    location: 'Bhaktapur',
+    assignedDate: '2026-03-28',
+    riskLevel: 'moderate',
+    streak: 4,
+    adherence: 64,
+    treatmentDays: 18,
+    checkinFrequency: '4/week',
+    summaryGeneratedAt: 'March 28, 2026 at 9:40 AM',
+    liveAlertCopy: 'Patient D-6391 showed a sharp anxiety spike around assignment deadlines and family pressure triggers.',
+    fullVoiceSummary: 'Patient identified social pressure and academic uncertainty as current stress amplifiers. Sleep averaged 5 hours in the last two nights, with better mood after support chat scripts. Appetite remains mildly reduced, but patient is still attending sessions and practicing guided grounding. No suicidal ideation mentioned; monitor closely for exam-week escalation.',
+    medications: [
+      { name: 'Fluoxetine 20mg', dose: 'Daily - Morning' },
+      { name: 'Hydroxyzine 10mg', dose: 'As needed - Evening' },
+    ],
+    moodHistory: buildMoodHistory(4.8),
+    vitalsHistory: buildVitalsHistory(7.8, 5.1),
+    recoverySignals: [
+      { label: 'Goal Completion', value: 64, color: '#0891b2' },
+      { label: 'Support Reach-outs', value: 47, color: '#16a34a' },
+      { label: 'Therapy Engagement', value: 69, color: '#2563eb' },
+    ],
+    aiSummaries: [
+      'Family pressure themes observed in support chats.',
+      'Requested stigma-safe script for trusted sibling conversation.',
+      'Moderate anxiety spikes around assignment deadlines.'
+    ]
+  },
+  {
+    id: 'p-005',
+    code: 'Patient E-5510',
+    name: 'Sujan Rai',
+    age: 26,
+    gender: 'Male',
+    location: 'Dharan',
+    assignedDate: '2026-03-22',
+    riskLevel: 'high',
+    streak: 1,
+    adherence: 42,
+    treatmentDays: 12,
+    checkinFrequency: '3/week',
+    summaryGeneratedAt: 'March 28, 2026 at 10:04 AM',
+    liveAlertCopy: 'Patient E-5510 used repeated crisis language and reported severe sleep collapse in latest check-in.',
+    fullVoiceSummary: 'Patient described fear about financial instability and loss of role identity. Sleep dropped below 4 hours on consecutive nights, and hopeless statements increased in intensity. Positive marker: patient accepted immediate follow-up and agreed to contact a trusted support person. Escalation routing is recommended with same-day clinician outreach.',
+    medications: [
+      { name: 'Venlafaxine 37.5mg', dose: 'Daily - Morning' },
+      { name: 'Clonazepam 0.25mg', dose: 'Short-term as prescribed' },
+    ],
+    moodHistory: buildMoodHistory(3.2),
+    vitalsHistory: buildVitalsHistory(8.8, 4.2),
+    recoverySignals: [
+      { label: 'Goal Completion', value: 42, color: '#0891b2' },
+      { label: 'Support Reach-outs', value: 31, color: '#16a34a' },
+      { label: 'Therapy Engagement', value: 48, color: '#2563eb' },
+    ],
+    aiSummaries: [
+      'High financial stress and job uncertainty signals.',
+      'Repeated crisis language detected this week.',
+      'Needs same-day follow-up and support routing.'
+    ]
+  }
+];
+
+const CLINICIAN_MOCK_ALERTS = [
+  {
+    id: 'a-001',
+    patientId: 'p-a-2847',
+    patientName: 'Patient A-2847',
+    timestamp: '2026-03-28T09:12:00Z',
+    event: 'High distress in latest voice check-in',
+    acknowledged: false,
+  },
+  {
+    id: 'a-002',
+    patientId: 'p-005',
+    patientName: 'Sujan Rai',
+    timestamp: '2026-03-28T10:04:00Z',
+    event: 'Crisis keyword + severe sleep drop',
+    acknowledged: false,
+  },
+  {
+    id: 'a-003',
+    patientId: 'p-004',
+    patientName: 'Nisha Tamang',
+    timestamp: '2026-03-28T07:48:00Z',
+    event: 'Rapid anxiety escalation in morning check-in',
+    acknowledged: false,
+  },
+  {
+    id: 'a-004',
+    patientId: 'p-002',
+    patientName: 'Maya Gurung',
+    timestamp: '2026-03-27T18:20:00Z',
+    event: 'Negative mood trend for 3 days',
+    acknowledged: true,
+  },
+];
+
+const WEB_DUMMY_TRENDS = [6.0, 5.7, 5.4, 5.9, 6.2, 5.8, 5.3, 5.1, 5.4, 5.6, 5.9, 6.1, 5.8, 5.5].map((mood, idx) => ({
+  timestamp: new Date(Date.now() - (13 - idx) * 1000 * 60 * 60 * 24).toISOString(),
+  mood,
+  score: Math.max(8, Math.min(95, Math.round((10 - mood) * 10 + (idx % 3) * 5)))
+}));
+
+const WEB_DUMMY_RECORDS = CLINICIAN_MOCK_PATIENTS.map((p, i) => ({
+  id: `web-dummy-${p.id}`,
+  timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * 6).toISOString(),
+  score: p.riskLevel === 'high' ? 78 - i : p.riskLevel === 'moderate' ? 54 - i : 24 + i,
+  riskLevel: p.riskLevel,
+  summary: { impression: p.aiSummaries[0] || 'Stable follow-up recommended.' },
+  escalation: p.riskLevel === 'high'
+}));
+
+const WEB_DUMMY_INSIGHTS = {
+  burnoutRisk: 'moderate',
+  depressionRisk: 'low',
+  confidence: 82,
+  narrative: 'Dummy forecast: mild risk spikes around workload bursts; trend improves with journaling and breathing adherence.'
+};
+
+const WEB_DUMMY_ESCALATIONS = CLINICIAN_MOCK_ALERTS
+  .filter(a => !a.acknowledged)
+  .map((a, i) => ({
+    id: `web-esc-${a.id}`,
+    timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * 7).toISOString(),
+    severity: 'high',
+    reason: a.event,
+    contacts: ['trusted-contact-1', 'local-health-post']
+  }));
+
+function initClinicianDashboard() {
+  if (!state.clinicianPatients.length) state.clinicianPatients = CLINICIAN_MOCK_PATIENTS;
+  if (!state.clinicianAlerts.length) state.clinicianAlerts = CLINICIAN_MOCK_ALERTS.map(a => ({ ...a }));
+
+  const search = document.getElementById('clinician-search');
+  if (search && !search.dataset.bound) {
+    search.dataset.bound = 'true';
+    search.addEventListener('input', e => {
+      state.clinicianUi.query = (e.target.value || '').toLowerCase().trim();
+      renderClinicianRecords();
+    });
+  }
+
+  const riskWrap = document.getElementById('clinician-risk-filters');
+  if (riskWrap && !riskWrap.dataset.bound) {
+    riskWrap.dataset.bound = 'true';
+    riskWrap.addEventListener('click', e => {
+      const btn = e.target.closest('[data-risk]');
+      if (!btn) return;
+      state.clinicianUi.riskFilter = btn.dataset.risk || 'all';
+      renderClinicianRecords();
+    });
+  }
+
+  const dateWrap = document.getElementById('clinician-date-filters');
+  if (dateWrap && !dateWrap.dataset.bound) {
+    dateWrap.dataset.bound = 'true';
+    dateWrap.addEventListener('click', e => {
+      const btn = e.target.closest('[data-date]');
+      if (!btn) return;
+      state.clinicianUi.dateFilter = btn.dataset.date || 'all';
+      renderClinicianRecords();
+    });
+  }
+
+  const pList = document.getElementById('clinician-patient-list');
+  if (pList && !pList.dataset.bound) {
+    pList.dataset.bound = 'true';
+    pList.addEventListener('click', e => {
+      const card = e.target.closest('[data-patient-id]');
+      if (!card) return;
+      state.clinicianUi.activePatientId = card.dataset.patientId;
+      renderClinicianRecords();
+    });
+  }
+
+  const toggleAlerts = document.getElementById('btn-clin-alerts-toggle');
+  if (toggleAlerts && !toggleAlerts.dataset.bound) {
+    toggleAlerts.dataset.bound = 'true';
+    toggleAlerts.addEventListener('click', () => {
+      state.clinicianUi.alertsOpen = !state.clinicianUi.alertsOpen;
+      renderClinicianRecords();
+    });
+  }
+
+  const alertList = document.getElementById('clinician-alert-list');
+  if (alertList && !alertList.dataset.bound) {
+    alertList.dataset.bound = 'true';
+    alertList.addEventListener('click', e => {
+      const btn = e.target.closest('[data-alert-id]');
+      if (!btn) return;
+      const id = btn.dataset.alertId;
+      state.clinicianAlerts = state.clinicianAlerts.map(a => a.id === id ? { ...a, acknowledged: true } : a);
+      renderClinicianRecords();
+    });
+  }
+
+  const pushBtn = document.getElementById('btn-push-patient');
+  if (pushBtn && !pushBtn.dataset.bound) {
+    pushBtn.dataset.bound = 'true';
+    pushBtn.addEventListener('click', () => {
+      state.clinicianUi.pushSuccess = true;
+      const selectedMilestone = document.getElementById('clinician-milestone-select')?.value || 'Milestone';
+      showToast(`✅ Intervention pushed: ${selectedMilestone}`);
+      renderClinicianRecords();
+      setTimeout(() => {
+        state.clinicianUi.pushSuccess = false;
+        renderClinicianRecords();
+      }, 1500);
+    });
+  }
+
+  const saveDraftBtn = document.getElementById('btn-save-draft');
+  if (saveDraftBtn && !saveDraftBtn.dataset.bound) {
+    saveDraftBtn.dataset.bound = 'true';
+    saveDraftBtn.addEventListener('click', () => {
+      showToast('💾 Milestone saved as draft');
+    });
+  }
+
+  const contactBtn = document.getElementById('btn-contact-patient');
+  if (contactBtn && !contactBtn.dataset.bound) {
+    contactBtn.dataset.bound = 'true';
+    contactBtn.addEventListener('click', () => {
+      const active = state.clinicianPatients.find(p => p.id === state.clinicianUi.activePatientId);
+      const label = active?.code || active?.name || 'Selected patient';
+      showToast(`📞 Contact workflow opened for ${label}`);
+    });
+  }
+
+  const reviewBtn = document.getElementById('btn-review-summary');
+  if (reviewBtn && !reviewBtn.dataset.bound) {
+    reviewBtn.dataset.bound = 'true';
+    reviewBtn.addEventListener('click', () => {
+      const section = document.getElementById('clinician-summary-section');
+      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  renderClinicianRecords();
+}
 
 // ── Slider Sync ──
 const sliders = [
@@ -416,16 +843,25 @@ async function refreshRemote() {
     const insRes = unwrapApi(insRaw);
     const escRes = unwrapApi(escRaw);
 
-    state.trends = trendRes.points || [];
-    state.records = (recRes.records || []).slice(-8).reverse();
-    state.insights = insRes.insights;
-    state.escalations = (escRes.records || []).slice(-8).reverse();
+    state.trends = (trendRes.points && trendRes.points.length) ? trendRes.points : WEB_DUMMY_TRENDS;
+    state.records = ((recRes.records && recRes.records.length) ? recRes.records : WEB_DUMMY_RECORDS).slice(-8).reverse();
+    state.insights = insRes.insights || WEB_DUMMY_INSIGHTS;
+    state.escalations = ((escRes.records && escRes.records.length) ? escRes.records : WEB_DUMMY_ESCALATIONS).slice(-8).reverse();
 
     renderMoodCharts();
     renderClinicianRecords();
     renderInsights();
     renderAuditLog();
-  } catch { /* offline-first */ }
+  } catch {
+    state.trends = WEB_DUMMY_TRENDS;
+    state.records = WEB_DUMMY_RECORDS.slice(-8).reverse();
+    state.insights = WEB_DUMMY_INSIGHTS;
+    state.escalations = WEB_DUMMY_ESCALATIONS.slice(-8).reverse();
+    renderMoodCharts();
+    renderClinicianRecords();
+    renderInsights();
+    renderAuditLog();
+  }
 }
 
 function renderMoodCharts() {
@@ -444,26 +880,146 @@ function renderMoodCharts() {
 }
 
 function renderClinicianRecords() {
-  const el = document.getElementById('clinician-records');
-  if (!el) return;
-  if (!state.records.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">No clinical records synced yet.</div>'; return; }
-  el.innerHTML = state.records.map(r => {
-    const badgeCls = r.riskLevel === 'high' ? 'badge-high' : r.riskLevel === 'moderate' ? 'badge-moderate' : 'badge-low';
-    return `<div class="record-item">
-      <div class="record-header"><span class="record-date">${new Date(r.timestamp).toLocaleString()}</span><span class="badge ${badgeCls}">${(r.riskLevel || '').toUpperCase()}</span></div>
-      <div class="record-body">Risk: ${r.score}/100 · ${escapeHtml(r.summary?.impression || '')}${r.escalation ? '<br/><span style="color:var(--danger);font-weight:700;">⚠️ ESCALATION FLAGGED</span>' : ''}</div>
-    </div>`;
-  }).join('');
+  const listEl = document.getElementById('clinician-patient-list');
+  if (!listEl) return;
 
-  // Latest summary
-  const sumEl = document.getElementById('clinician-summary');
-  if (sumEl && state.result) {
-    const s = state.result.clinicalSummary;
-    sumEl.innerHTML = `
-      <div style="font-size:15px;color:var(--text-primary);font-weight:600;margin-bottom:10px;">${escapeHtml(s.impression)}</div>
-      ${s.highlights.map(h => `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">• ${escapeHtml(h)}</div>`).join('')}
-      <div class="plan-box"><div class="plan-label">Recommended Plan</div><div class="plan-text">${escapeHtml(s.recommendedPlan)}</div></div>
-    `;
+  const ui = state.clinicianUi;
+  const now = Date.now();
+
+  const filtered = state.clinicianPatients.filter(p => {
+    const queryOk = !ui.query || p.name.toLowerCase().includes(ui.query) || p.location.toLowerCase().includes(ui.query);
+    const riskOk = ui.riskFilter === 'all' || p.riskLevel === ui.riskFilter;
+    const assignedDays = (now - new Date(p.assignedDate).getTime()) / (1000 * 60 * 60 * 24);
+    const dateOk = ui.dateFilter === 'all' || (ui.dateFilter === '7' ? assignedDays <= 7 : assignedDays <= 30);
+    return queryOk && riskOk && dateOk;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="color:var(--text-muted);padding:18px;text-align:center;">No patients match your filters.</div>';
+  } else {
+    const levelLabel = lvl => lvl === 'high' ? 'Severe' : lvl === 'moderate' ? 'Monitor' : 'Stable';
+    const badgeCls = lvl => lvl === 'high' ? 'badge-high' : lvl === 'moderate' ? 'badge-moderate' : 'badge-low';
+    const toneClass = lvl => lvl === 'high' ? 'severe' : lvl === 'moderate' ? 'monitor' : 'stable';
+    listEl.innerHTML = filtered.map(p => `
+      <div class="clin-patient-card ${toneClass(p.riskLevel)} ${p.id === ui.activePatientId ? 'active' : ''}" data-patient-id="${p.id}">
+        <div class="clin-patient-title">
+          <div class="clin-patient-name">${escapeHtml(p.name)}</div>
+          <span class="badge ${badgeCls(p.riskLevel)}">${levelLabel(p.riskLevel)}</span>
+        </div>
+        <div class="clin-patient-meta">${escapeHtml(p.location)} · Assigned ${p.assignedDate}</div>
+        <div class="clin-patient-meta">Streak ${p.streak} days · Adherence ${p.adherence}%</div>
+      </div>
+    `).join('');
+  }
+
+  const active = state.clinicianPatients.find(p => p.id === ui.activePatientId) || filtered[0] || state.clinicianPatients[0];
+  if (active) state.clinicianUi.activePatientId = active.id;
+
+  document.querySelectorAll('#clinician-risk-filters [data-risk]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.risk === ui.riskFilter);
+  });
+  document.querySelectorAll('#clinician-date-filters [data-date]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.date === ui.dateFilter);
+  });
+
+  setText('clinician-active-name', active?.name || '—');
+  setText('clinician-active-meta', active ? `${active.age} · ${active.gender} · ${active.location}` : '—');
+  setText('clinician-active-streak', active ? `${active.streak}d` : '—');
+  setText('clinician-active-adherence', active ? `${active.adherence}%` : '—');
+  setText('clinician-live-alert-title', `Live Emergency Alert - ${active?.location || 'Selected'} Patient`);
+  setText('clinician-live-alert-copy', active?.liveAlertCopy || 'No active live alert for selected patient.');
+  setText('clinician-summary-patient', active?.code || active?.name || 'Patient');
+  setText('clinician-voice-summary', active?.fullVoiceSummary || 'No latest voice summary.');
+  setText('clinician-generated-at', `Generated: ${active?.summaryGeneratedAt || new Date().toLocaleString()}`);
+  const moodLabels = (active?.moodHistory || []).map(pt => pt.day).join(' · ');
+  setText('clinician-mood-subtitle', moodLabels || 'Recent daily mood trend');
+
+  const chartEl = document.getElementById('clinician-mood-chart');
+  if (chartEl && active) {
+    chartEl.innerHTML = active.moodHistory.map(pt => {
+      const h = Math.max(6, pt.score * 11);
+      const col = active.riskLevel === 'high' ? 'var(--danger)' : active.riskLevel === 'moderate' ? 'var(--warning)' : 'var(--success)';
+      return `<div class="bar-col"><div class="bar-fill" style="height:${h}px;background:linear-gradient(180deg,${col},rgba(56,189,248,0.18))"></div><div class="bar-label">${pt.day.replace('D', '')}</div></div>`;
+    }).join('');
+  }
+
+  const aiEl = document.getElementById('clinician-ai-summaries');
+  if (aiEl && active) {
+    const fromResult = state.result?.clinicalSummary?.impression;
+    const lines = fromResult ? [fromResult, ...active.aiSummaries].slice(0, 4) : active.aiSummaries;
+    aiEl.innerHTML = lines.map(l => `<div class="signal-item"><span class="signal-name">• ${escapeHtml(l)}</span></div>`).join('');
+  }
+
+  const medsEl = document.getElementById('clinician-medications');
+  if (medsEl) {
+    const meds = active?.medications || [];
+    medsEl.innerHTML = meds.length
+      ? meds.map(m => `<div class="clin-med-row"><span class="clin-med-name">${escapeHtml(m.name)}</span><span class="clin-med-dose">${escapeHtml(m.dose)}</span></div>`).join('')
+      : '<div class="record-body" style="font-size:13px;color:var(--text-muted);">No active medications listed.</div>';
+  }
+
+  const metricsEl = document.getElementById('clinician-activity-metrics');
+  if (metricsEl) {
+    const riskLabel = active?.riskLevel === 'high' ? 'HIGH PRIORITY' : active?.riskLevel === 'moderate' ? 'MODERATE WATCH' : 'STABLE WATCH';
+    const riskStyle = active?.riskLevel === 'high' ? 'background:var(--danger-dim);color:var(--danger);' : active?.riskLevel === 'moderate' ? 'background:var(--warning-dim);color:var(--warning);' : 'background:var(--success-dim);color:var(--success);';
+    const metrics = [
+      ['Check-In Frequency', active?.checkinFrequency || '6/week'],
+      ['Goal Completion', `${active?.adherence || 0}%`],
+      ['Treatment Days', `${active?.treatmentDays || 45}`],
+      ['Risk Level', `<span class="clin-risk-pill" style="${riskStyle}">${riskLabel}</span>`]
+    ];
+    metricsEl.innerHTML = metrics.map(([name, val]) => `<div class="clin-metric-row"><span class="clin-metric-name">${name}</span><span class="clin-metric-value">${val}</span></div>`).join('');
+  }
+
+  const vitalsEl = document.getElementById('clinician-vitals-chart');
+  if (vitalsEl && active) {
+    const vitals = (active.vitalsHistory && active.vitalsHistory.length) ? active.vitalsHistory : buildVitalsHistory(6.4, 5.6);
+    vitalsEl.innerHTML = vitals.map(pt => {
+      const anxHeight = Math.max(8, pt.anxiety * 9);
+      const sleepHeight = Math.max(8, pt.sleep * 9);
+      return `<div class="clin-duo-col"><div class="clin-duo-bars"><div class="clin-duo-bar anxiety" style="height:${anxHeight}px"></div><div class="clin-duo-bar sleep" style="height:${sleepHeight}px"></div></div><div class="bar-label">${pt.day}</div></div>`;
+    }).join('');
+  }
+
+  const recoveryEl = document.getElementById('clinician-recovery-chart');
+  if (recoveryEl && active) {
+    const signals = (active.recoverySignals && active.recoverySignals.length) ? active.recoverySignals : [
+      { label: 'Goal Completion', value: active?.adherence || 0, color: '#0891b2' },
+      { label: 'Support Reach-outs', value: 62, color: '#16a34a' },
+      { label: 'Therapy Engagement', value: 74, color: '#2563eb' }
+    ];
+    recoveryEl.innerHTML = signals.map(sig => `
+      <div class="clin-recovery-row">
+        <div class="clin-recovery-meta"><span class="clin-recovery-name">${escapeHtml(sig.label)}</span><span class="clin-recovery-value">${sig.value}%</span></div>
+        <div class="clin-recovery-track"><div class="clin-recovery-fill" style="width:${Math.max(0, Math.min(100, sig.value))}%;background:${sig.color};"></div></div>
+      </div>
+    `).join('');
+  }
+
+  const alertsDrawer = document.getElementById('clinician-alerts-drawer');
+  const alertsCount = state.clinicianAlerts.filter(a => !a.acknowledged).length;
+  setText('clinician-alert-count', `${alertsCount} Critical Alerts`);
+  if (alertsDrawer) alertsDrawer.style.display = ui.alertsOpen ? 'block' : 'none';
+
+  const alertList = document.getElementById('clinician-alert-list');
+  if (alertList) {
+    alertList.innerHTML = state.clinicianAlerts.map(a => `
+      <div class="clin-alert-item ${a.acknowledged ? 'ack' : ''}">
+        <div class="clin-alert-meta">
+          <div class="clin-alert-title">${escapeHtml(a.patientName)}</div>
+          <div class="clin-alert-time">${new Date(a.timestamp).toLocaleString()}</div>
+          <div class="clin-alert-event">${escapeHtml(a.event)}</div>
+        </div>
+        <button class="clin-alert-ack ${a.acknowledged ? 'acked' : ''}" data-alert-id="${a.id}">${a.acknowledged ? 'Acknowledged' : 'Acknowledge'}</button>
+      </div>
+    `).join('');
+  }
+
+  const pushStatus = document.getElementById('clinician-push-status');
+  if (pushStatus) {
+    pushStatus.textContent = ui.pushSuccess ? '✅ Successfully pushed to patient app.' : 'No pending push.';
+    pushStatus.style.color = ui.pushSuccess ? 'var(--success)' : 'var(--text-muted)';
+    pushStatus.style.fontWeight = ui.pushSuccess ? '700' : '500';
   }
 }
 
@@ -516,6 +1072,7 @@ updateDashboard();
 updateSignals();
 refreshRemote();
 initCareerSupportFeatures();
+initClinicianDashboard();
 
 // Auto-update greeting based on time
 const hour = new Date().getHours();

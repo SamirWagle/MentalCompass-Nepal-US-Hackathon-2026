@@ -28,6 +28,7 @@ import AlertsScreen from "./src/screens/AlertsScreen";
 import CommunityScreen from "./src/screens/CommunityScreen";
 import ComplianceScreen from "./src/screens/ComplianceScreen";
 import MilestonesScreen from "./src/screens/MilestonesScreen";
+import { MOCK_ALERTS, MOCK_PATIENTS } from "./src/mockData";
 import TriageScreen from "./src/screens/TriageScreen";
 import VaultScreen from "./src/screens/VaultScreen";
 import WipeLogScreen from "./src/screens/WipeLogScreen";
@@ -39,6 +40,47 @@ const initialInput: CheckinInput = {
   phoneUsageHours: 4, typingSpeedDelta: 0.1, speechRateWpm: 125,
   pauseRatio: 0.2, jitter: 0.02, sentiment: 0, crisisSignals: [], journalText: ""
 };
+
+const EXPO_DUMMY_RECORDS = MOCK_PATIENTS.map((p, i) => ({
+  id: `dummy-${p.id}`,
+  timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * 8).toISOString(),
+  score: p.score,
+  riskLevel: p.risk === "severe" ? "high" : p.risk === "monitor" ? "moderate" : "low",
+  summary: { impression: p.summary },
+  escalation: p.risk === "severe"
+}));
+
+const EXPO_DUMMY_TRENDS: TrendPoint[] = [
+  6.1, 5.8, 5.4, 5.7, 6.0, 5.3, 5.0, 4.8, 5.2, 5.5, 5.9, 6.2, 6.0, 5.7
+].map((mood, idx) => {
+  const score = Math.max(5, Math.min(95, Math.round((10 - mood) * 10 + (idx % 4) * 4)));
+  return {
+    timestamp: new Date(Date.now() - (13 - idx) * 1000 * 60 * 60 * 24).toISOString(),
+    mood,
+    score,
+  };
+});
+
+const EXPO_DUMMY_INSIGHTS: PredictiveInsights = {
+  burnoutRisk: "moderate",
+  depressionRisk: "low",
+  confidence: 81,
+  narrative: "Dummy forecast: mild instability during workload spikes, improving with consistent check-ins and breathing routines.",
+  next72hRiskScore: 47
+};
+
+const EXPO_DUMMY_ESCALATIONS: EscalationRecord[] = MOCK_ALERTS
+  .filter((a) => a.severity === "high")
+  .map((a, i) => ({
+    id: `esc-dummy-${a.id}`,
+    timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * 5).toISOString(),
+    userId: USER_ID,
+    severity: "high",
+    reason: a.event,
+    contacts: ["trusted-contact-1", "local-health-post"],
+    acknowledged: a.acknowledged,
+    auditHash: `dummy-hash-${a.id}`
+  }));
 
 // Smooth animated screen wrapper
 function AnimatedScreen({ children, screenKey, currentScreen }: { children: React.ReactNode; screenKey: ScreenKey; currentScreen: ScreenKey }) {
@@ -112,9 +154,16 @@ export default function App() {
         fetchTrends(USER_ID), fetchRecords(USER_ID),
         fetchPredictiveInsights(USER_ID), fetchEscalations(USER_ID)
       ]);
-      setTrends(td); setRecords(rd.slice(-8).reverse());
-      setInsights(id); setEscalations(ed.slice(-8).reverse());
-    } catch {}
+      setTrends(td.length ? td : EXPO_DUMMY_TRENDS);
+      setRecords((rd.length ? rd : EXPO_DUMMY_RECORDS).slice(-8).reverse());
+      setInsights(id || EXPO_DUMMY_INSIGHTS);
+      setEscalations((ed.length ? ed : EXPO_DUMMY_ESCALATIONS).slice(-8).reverse());
+    } catch {
+      setTrends(EXPO_DUMMY_TRENDS);
+      setRecords(EXPO_DUMMY_RECORDS.slice(-8).reverse());
+      setInsights(EXPO_DUMMY_INSIGHTS);
+      setEscalations(EXPO_DUMMY_ESCALATIONS.slice(-8).reverse());
+    }
   }
 
   async function persistMemory(next: MemoryItem[]) {
