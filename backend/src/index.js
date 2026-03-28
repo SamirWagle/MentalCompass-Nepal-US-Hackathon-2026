@@ -22,6 +22,19 @@ import {
   generateClinicalSummary,
   analyzeJournalSentiment
 } from "./lib/gemini.js";
+import {
+  seedSuperAdmin,
+  createUser,
+  authenticateUser,
+  getUserById,
+  listUsers,
+  updateUser,
+  deleteUser,
+  getGuardiansForPatient,
+  getLinkedPatient,
+  ROLES
+} from "./store/userStore.js";
+import { generateToken, requireAuth, requireRole, optionalAuth } from "./lib/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -262,11 +275,99 @@ app.get("/api/users/:userId/escalations", (req, res) => {
   sendOk(req, res, { userId, total: records.length, records }, 200, { domain: "escalations" });
 });
 
+// ═══════════════════════════════════════════════
+// ── IAM: Authentication & User Management ──
+// ═══════════════════════════════════════════════
+
+// Login
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "Email and password are required.");
+  }
+  const result = authenticateUser(email, password);
+  if (result.error) {
+    return sendError(req, res, 401, result.error, result.message);
+  }
+  const token = generateToken(result.user);
+  sendOk(req, res, { token, user: result.user }, 200, { domain: "auth" });
+});
+
+// Get current user profile
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  sendOk(req, res, { user: req.user }, 200, { domain: "auth" });
+});
+
+// ── IAM: User CRUD (Super Admin only) ──
+
+app.post("/api/iam/users", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const { email, password, fullName, role, doctorType, linkedPatientId, phone } = req.body || {};
+  if (!email || !password || !fullName || !role) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "email, password, fullName, and role are required.");
+  }
+  const result = createUser({
+    email,
+    password,
+    fullName,
+    role,
+    doctorType,
+    linkedPatientId,
+    phone,
+    createdBy: req.user.id,
+  });
+  if (result.error) {
+    return sendError(req, res, 409, result.error, result.message);
+  }
+  sendOk(req, res, result, 201, { domain: "iam" });
+});
+
+app.get("/api/iam/users", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const { role } = req.query;
+  const users = listUsers(role || null);
+  sendOk(req, res, { users, total: users.length }, 200, { domain: "iam" });
+});
+
+app.get("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const user = getUserById(req.params.userId);
+  if (!user) return sendError(req, res, 404, "NOT_FOUND", "User not found.");
+  sendOk(req, res, { user }, 200, { domain: "iam" });
+});
+
+app.put("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const result = updateUser(req.params.userId, req.body || {});
+  if (result.error) return sendError(req, res, 404, result.error, result.message);
+  sendOk(req, res, result, 200, { domain: "iam" });
+});
+
+app.delete("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const result = deleteUser(req.params.userId);
+  if (result.error) return sendError(req, res, 404, result.error, result.message);
+  sendOk(req, res, result, 200, { domain: "iam" });
+});
+
+// Get guardians linked to a patient
+app.get("/api/iam/patients/:patientId/guardians", requireAuth, requireRole(ROLES.SUPER_ADMIN, ROLES.DOCTOR), (req, res) => {
+  const guardians = getGuardiansForPatient(req.params.patientId);
+  sendOk(req, res, { guardians }, 200, { domain: "iam" });
+});
+
+// Guardian: get my linked patient
+app.get("/api/iam/my-patient", requireAuth, requireRole(ROLES.GUARDIAN), (req, res) => {
+  const patient = getLinkedPatient(req.user.id);
+  if (!patient) return sendError(req, res, 404, "NOT_FOUND", "No linked patient found.");
+  sendOk(req, res, { patient }, 200, { domain: "iam" });
+});
+
+// 404 catch-all (MUST be last)
 app.use((req, res) => {
   sendError(req, res, 404, "NOT_FOUND", `Route not found: ${req.method} ${req.originalUrl}`);
 });
 
+// Seed super admin and start
+const adminAccount = seedSuperAdmin();
+
 app.listen(port, () => {
   console.log(`AegisSpeak backend listening on :${port}`);
   console.log(`AI mode: ${process.env.GEMINI_API_KEY ? "Gemini active" : "Template fallback"}`);
+  console.log(`IAM: Super admin seeded (admin@aegisspeak.com)`);
 });
