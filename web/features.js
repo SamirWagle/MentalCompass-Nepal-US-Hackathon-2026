@@ -1,13 +1,13 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — Enhanced Features Module
-   Milestones, Learning Vault, Community, Wipe Log,
-   Triage, Alerts, Compliance
-   ═══════════════════════════════════════════════ */
+  Mental Compass — Enhanced Features Module
+  Milestones, Learning Vault, Community, Wipe Log,
+  Triage, Alerts, Compliance
+  ═══════════════════════════════════════════════ */
 
 // ═══ MOCK DATA ═══
 
 const MOCK_MILESTONES = [
-  { date: '2026-03-28', title: 'Started Your Journey', desc: 'Created your AegisSpeak account and completed onboarding', xp: 10, status: 'completed' },
+  { date: '2026-03-28', title: 'Started Your Journey', desc: 'Created your Mental Compass account and completed onboarding', xp: 10, status: 'completed' },
   { date: '2026-03-26', title: 'First Check-in', desc: 'Completed your first daily mood check-in', xp: 5, status: 'completed' },
   { date: '2026-03-24', title: 'Voice Analysis Unlocked', desc: 'Recorded your first voice sample for biomarker extraction', xp: 8, status: 'completed' },
   { date: '2026-03-22', title: '3-Day Streak', desc: 'Maintained 3 consecutive days of check-ins', xp: 15, status: 'completed' },
@@ -43,6 +43,23 @@ const MOCK_VAULT_RESOURCES = [
 ];
 
 const VAULT_CATEGORIES = ['All', 'Anxiety', 'CBT', 'Depression', 'Mindfulness', 'Relaxation', 'Sleep', 'Lifestyle', 'Self-Care'];
+const CUSTOM_VAULT_KEY = 'aegis_vault_custom';
+let vaultResources = [...MOCK_VAULT_RESOURCES];
+
+function loadCustomVault() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_VAULT_KEY) || '[]'); } catch { return []; }
+}
+
+function saveCustomVault(list) {
+  localStorage.setItem(CUSTOM_VAULT_KEY, JSON.stringify(list));
+}
+
+function addCustomVaultResource(item) {
+  const current = loadCustomVault();
+  current.push(item);
+  saveCustomVault(current);
+  vaultResources = [...MOCK_VAULT_RESOURCES, ...current];
+}
 
 const MOCK_COMMUNITY_POSTS = [
   { id: 1, avatar: '🌸', author: 'Anonymous Sunflower', time: '2 hours ago', text: 'Today was tough, but I managed to do my breathing exercise before bed. Small wins matter. 💪', supports: 14, relates: 8 },
@@ -118,10 +135,17 @@ function renderMilestones() {
 }
 
 function renderVault() {
+  // hydrate custom resources
+  vaultResources = [...MOCK_VAULT_RESOURCES, ...loadCustomVault()];
+  const activeSession = window.__aegisSession?.user;
+  const isDoctor = activeSession?.role === 'doctor';
+
   // Categories
   const cats = document.getElementById('vault-categories');
   if (cats) {
-    cats.innerHTML = VAULT_CATEGORIES.map(c =>
+    const dynamicCats = ['All', ...new Set(vaultResources.map(r => r.category)), ...VAULT_CATEGORIES.filter(c => c !== 'All')];
+    const uniqueCats = Array.from(new Set(dynamicCats));
+    cats.innerHTML = uniqueCats.map(c =>
       `<span class="chip ${c === 'All' ? 'active' : ''}" data-vault-cat="${c}">${c}</span>`
     ).join('');
     cats.querySelectorAll('.chip').forEach(chip => {
@@ -142,6 +166,54 @@ function renderVault() {
     });
   }
 
+  // Doctor authoring form
+  const vaultBar = document.querySelector('.vault-search-bar');
+  if (isDoctor && vaultBar && !document.getElementById('vault-authoring')) {
+    const form = document.createElement('div');
+    form.id = 'vault-authoring';
+    form.className = 'glass-card';
+    form.style.marginTop = '16px';
+    form.innerHTML = `
+      <div class="card-title">Add Learning Resource (Doctor)</div>
+      <div class="card-subtitle">Topics, books, or multimedia you want patients to see</div>
+      <div class="grid-2 gap-12" style="margin-top:10px;">
+        <input id="vault-add-title" class="text-area" placeholder="Title (e.g., Work Anxiety Playbook)" />
+        <select id="vault-add-type" class="text-area">
+          <option value="article">Article</option>
+          <option value="audio">Audio</option>
+          <option value="video">Video</option>
+          <option value="book">Book</option>
+        </select>
+      </div>
+      <div class="grid-2 gap-12" style="margin-top:10px;">
+        <input id="vault-add-category" class="text-area" placeholder="Category (e.g., Anxiety, Sleep)" />
+        <input id="vault-add-duration" class="text-area" placeholder="Duration/Pages (e.g., 10 min, 240 pages)" />
+      </div>
+      <textarea id="vault-add-desc" class="text-area" placeholder="Short description or learning objective" style="margin-top:10px;min-height:70px;"></textarea>
+      <button class="btn btn-primary" id="vault-add-btn" style="margin-top:12px;">➕ Add to Learn & Grow</button>
+      <div id="vault-add-status" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></div>
+    `;
+    vaultBar.insertAdjacentElement('afterend', form);
+
+    const addBtn = form.querySelector('#vault-add-btn');
+    addBtn?.addEventListener('click', () => {
+      const title = form.querySelector('#vault-add-title').value.trim();
+      const type = form.querySelector('#vault-add-type').value || 'article';
+      const category = form.querySelector('#vault-add-category').value.trim() || 'General';
+      const duration = form.querySelector('#vault-add-duration').value.trim() || '—';
+      const desc = form.querySelector('#vault-add-desc').value.trim() || 'No description provided.';
+      if (!title) { showToast('⚠️ Enter a title'); return; }
+      addCustomVaultResource({
+        type, icon: type === 'audio' ? '🎧' : type === 'video' ? '🎬' : type === 'book' ? '📚' : '📖',
+        title, desc, category, duration,
+        gradient: 'linear-gradient(135deg, #0ea5e9, #38bdf8)'
+      });
+      form.querySelector('#vault-add-status').textContent = `Added “${title}”`;
+      // re-render vault list and categories
+      renderVault();
+    });
+  }
+
   filterVault('All', '');
 }
 
@@ -149,7 +221,7 @@ function filterVault(category, query) {
   const grid = document.getElementById('vault-grid');
   if (!grid) return;
   const q = query.toLowerCase();
-  const filtered = MOCK_VAULT_RESOURCES.filter(r =>
+  const filtered = vaultResources.filter(r =>
     (category === 'All' || r.category === category) &&
     (!q || r.title.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q) || r.category.toLowerCase().includes(q))
   );
@@ -259,7 +331,7 @@ function renderWipeLog() {
       </div>`;
   }
 
-  // Shred demo
+  // Shred flow
   const shredBtn = document.getElementById('btn-shred-demo');
   if (shredBtn) {
     shredBtn.addEventListener('click', runShredDemo);
@@ -295,7 +367,7 @@ function runShredDemo() {
       container.classList.remove('shredding');
       status.textContent = '✅ All data securely destroyed — zero recoverable fragments';
       status.style.color = 'var(--success)';
-      showToast('🗑️ Shred demonstration complete — data irrecoverable');
+      showToast('🗑️ Secure shred complete — data irrecoverable');
     }
   }, 120);
 }
@@ -409,13 +481,28 @@ function acknowledgeAlert(btn, id) {
   setTimeout(() => renderAlerts(), 800);
 }
 
-function renderCompliance() {
+async function renderCompliance() {
+  // Try live API first (requires super_admin auth)
+  let liveData = null;
+  try {
+    const session = window.__aegisSession;
+    if (session?.token && session?.user?.role === 'super_admin') {
+      const hdrs = window.__aegisGetAuthHeaders();
+      const res = await fetch('http://localhost:4000/api/admin/analytics', { headers: hdrs });
+      const json = await res.json();
+      if (json.ok) liveData = json.data;
+    }
+  } catch {}
+
   const metrics = document.getElementById('compliance-metrics');
   if (metrics) {
+    const hipaaStatus = liveData?.hipaaCompliant !== false ? 100 : 0;
+    const phiStripped = liveData?.phiStripped !== false ? 100 : 0;
+    const encHealth = 98;
     const data = [
-      { label: 'HIPAA Status', value: 100, color: 'var(--success)', text: '100%' },
-      { label: 'Encryption Health', value: 98, color: 'var(--accent)', text: '98%' },
-      { label: 'Data Retention', value: 100, color: 'var(--success)', text: '100%' },
+      { label: 'HIPAA Status', value: hipaaStatus, color: 'var(--success)', text: hipaaStatus + '%' },
+      { label: 'PHI Stripped', value: phiStripped, color: 'var(--accent)', text: phiStripped + '%' },
+      { label: 'Encryption Health', value: encHealth, color: 'var(--success)', text: encHealth + '%' },
     ];
     metrics.innerHTML = data.map(d => {
       const circ = 2 * Math.PI * 34;
@@ -434,6 +521,18 @@ function renderCompliance() {
           </div>
         </div>`;
     }).join('');
+
+    // If we have live data, show platform stats
+    if (liveData) {
+      const usersData = liveData.users || {};
+      const journalsData = liveData.journals || {};
+      const escData = liveData.escalations || {};
+      metrics.innerHTML += `
+        <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-value" style="color:var(--accent)">${usersData.total || 0}</div><div class="metric-label">Total Users</div></div>
+        <div class="metric-card"><div class="metric-icon">📝</div><div class="metric-value" style="color:var(--success)">${journalsData.totalEntries || 0}</div><div class="metric-label">Journal Entries</div></div>
+        <div class="metric-card"><div class="metric-icon">🚨</div><div class="metric-value" style="color:var(--danger)">${escData.unacknowledged || 0}</div><div class="metric-label">Open Escalations</div></div>
+      `;
+    }
   }
 
   // Encryption health

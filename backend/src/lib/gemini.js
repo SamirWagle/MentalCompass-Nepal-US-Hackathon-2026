@@ -1,14 +1,62 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
+const AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || "").replace(/\/+$/, "");
+const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY || "";
+const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "";
 
-const MODEL_ID = "gemini-2.0-flash";
+let client = null;
 
-/**
- * Generate a copilot response grounded in the user's emotional context.
- */
+function hasAzureOpenAI() {
+  return Boolean(AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_API_KEY && AZURE_OPENAI_DEPLOYMENT);
+}
+
+// Initialize OpenAI client with Azure endpoint
+if (hasAzureOpenAI()) {
+  client = new OpenAI({
+    baseURL: AZURE_OPENAI_ENDPOINT,
+    apiKey: AZURE_OPENAI_API_KEY,
+  });
+}
+
+console.info(`[LLM] Provider: ${hasAzureOpenAI() ? "Azure OpenAI" : "Fallback"}`);
+
+async function callAzureChat({
+  systemPrompt,
+  userPrompt,
+  temperature = 0.4,
+  maxTokens = 700,
+  responseFormat,
+}) {
+  if (!client) {
+    throw new Error("Azure OpenAI client not initialized");
+  }
+
+  const body = {
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    model: AZURE_OPENAI_DEPLOYMENT,
+    temperature,
+    max_tokens: maxTokens,
+  };
+
+  if (responseFormat === "json") {
+    body.response_format = { type: "json_object" };
+  }
+
+  const completion = await client.chat.completions.create(body);
+  return String(completion?.choices?.[0]?.message?.content || "").trim();
+}
+
+function parseJsonText(text) {
+  const cleaned = String(text || "")
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+  return JSON.parse(cleaned);
+}
+
 export async function generateCopilotReply({
   userMessage,
   mood,
@@ -22,18 +70,12 @@ export async function generateCopilotReply({
   memoryContext = [],
   journalEmotion = "neutral"
 }) {
-  if (!genAI) {
-    return fallbackCopilotReply({ userMessage, mood, stress, riskScore, personality, language, memoryContext });
-  }
-
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
-
   const memorySnippet = memoryContext
     .slice(0, 5)
-    .map((m, i) => `  [${i + 1}] "${m.userMessage}" → copilot: "${m.copilotSummary}"`)
+    .map((m, i) => `  [${i + 1}] "${m.userMessage}" -> copilot: "${m.copilotSummary}"`)
     .join("\n");
 
-  const prompt = `You are AegisSpeak, a compassionate AI mental health copilot. Your personality style is "${personality}".
+  const prompt = `You are Mental Compass, a compassionate AI mental health copilot. Your personality style is "${personality}".
 Language: ${language === "ne" ? "Nepali" : language === "hi" ? "Hindi" : "English"}.
 
 Current patient state:
@@ -57,19 +99,24 @@ Instructions:
 - Always end with one concrete 30-60 second micro-action they can do right now
 - Do NOT use markdown formatting, respond in plain text`;
 
+  if (!hasAzureOpenAI()) {
+    return fallbackCopilotReply({ userMessage, mood, stress, riskScore, personality, language, memoryContext });
+  }
+
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return text.trim();
+    const text = await callAzureChat({
+      systemPrompt: "You are Mental Compass's safe, empathetic mental health copilot.",
+      userPrompt: prompt,
+      temperature: 0.6,
+      maxTokens: 420,
+    });
+    return text || fallbackCopilotReply({ userMessage, mood, stress, riskScore, personality, language, memoryContext });
   } catch (err) {
-    console.error("Gemini copilot error:", err.message);
+    console.error("Azure OpenAI copilot error:", err.message);
     return fallbackCopilotReply({ userMessage, mood, stress, riskScore, personality, language, memoryContext });
   }
 }
 
-/**
- * Generate an AI-powered clinical summary from check-in data.
- */
 export async function generateClinicalSummary({
   mood,
   anxiety,
@@ -87,11 +134,9 @@ export async function generateClinicalSummary({
   trendDelta,
   escalation
 }) {
-  if (!genAI) {
-    return null; // signal to caller to use template fallback
+  if (!hasAzureOpenAI()) {
+    return null;
   }
-
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
 
   const prompt = `You are a clinical AI assistant generating a structured psychiatric triage note for a remote clinician. Based on the following patient data, generate a clinical summary.
 
@@ -121,26 +166,28 @@ Generate a JSON object with exactly these keys:
 Respond with ONLY the JSON object, no markdown, no code fences.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    // Clean potential markdown code fences
-    const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
-    return JSON.parse(cleaned);
+    const text = await callAzureChat({
+      systemPrompt: "You are a concise clinical summarization assistant.",
+      userPrompt: prompt,
+      temperature: 0.2,
+      maxTokens: 700,
+      responseFormat: "json",
+    });
+    return parseJsonText(text);
   } catch (err) {
-    console.error("Gemini clinical summary error:", err.message);
+    console.error("Azure OpenAI clinical summary error:", err.message);
     return null;
   }
 }
 
-/**
- * Analyze journal text for emotional markers.
- */
 export async function analyzeJournalSentiment(journalText) {
-  if (!genAI || !journalText || journalText.trim().length < 5) {
+  if (!journalText || journalText.trim().length < 5) {
     return { emotion: "neutral", sentiment: 0, keywords: [], cbtSuggestion: "" };
   }
 
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
+  if (!hasAzureOpenAI()) {
+    return { emotion: "neutral", sentiment: 0, keywords: [], cbtSuggestion: "" };
+  }
 
   const prompt = `Analyze the following mental health journal entry for emotional content.
 
@@ -155,17 +202,21 @@ Return a JSON object with:
 Respond with ONLY the JSON object.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
-    return JSON.parse(cleaned);
+    const text = await callAzureChat({
+      systemPrompt: "You classify emotion from journaling text and return strict JSON.",
+      userPrompt: prompt,
+      temperature: 0.2,
+      maxTokens: 380,
+      responseFormat: "json",
+    });
+    return parseJsonText(text);
   } catch (err) {
-    console.error("Gemini journal analysis error:", err.message);
+    console.error("Azure OpenAI journal analysis error:", err.message);
     return { emotion: "neutral", sentiment: 0, keywords: [], cbtSuggestion: "" };
   }
 }
 
-function fallbackCopilotReply({ userMessage, mood, stress, riskScore, personality, language, memoryContext }) {
+function fallbackCopilotReply({ mood, stress, riskScore, personality, language, memoryContext }) {
   const last = memoryContext[0]?.copilotSummary ?? "No previous context.";
   const langLabel = language === "ne" ? "Nepali" : language === "hi" ? "Hindi" : "English";
 

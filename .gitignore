@@ -32,7 +32,7 @@ pnpm-debug.log*
 dist/
 build/
 coverage/
-backend/data/*.json
+#backend/data/*.json
 
 # Environment files
 .env

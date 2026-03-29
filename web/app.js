@@ -1,10 +1,27 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — Application Logic
-   ═══════════════════════════════════════════════ */
+  Mental Compass — Application Logic
+  ═══════════════════════════════════════════════ */
 
 const API = 'http://localhost:4000';
 const USER_ID = 'demo-user-nepal';
 const UX_MODE_KEY = 'aegis_ux_mode';
+
+function getSessionUser() {
+  return window.__aegisSession?.user || null;
+}
+
+function getActiveUserId() {
+  const user = getSessionUser();
+  return user?.id || user?.anonymousId || USER_ID;
+}
+
+function getOptionalAuthHeaders() {
+  if (typeof window.__aegisGetAuthHeaders === 'function') {
+    const hdrs = window.__aegisGetAuthHeaders();
+    if (hdrs && hdrs.Authorization) return hdrs;
+  }
+  return null;
+}
 
 function unwrapApi(payload) {
   if (payload && typeof payload === 'object' && payload.data) return payload.data;
@@ -26,6 +43,23 @@ const state = {
   escalations: [],
   avatarXp: 18,
   stability: 68,
+  gamify: {
+    xp: 18,
+    level: 3,
+    nextLevelXp: 100,
+    quests: [
+      { title: 'Complete today’s check-in', xp: 10, type: 'daily', done: false },
+      { title: 'Run a 60s breathing exercise', xp: 8, type: 'daily', done: true },
+      { title: 'Post a supportive comment', xp: 12, type: 'weekly', done: false },
+      { title: 'Review one clinical summary', xp: 15, type: 'weekly', done: false },
+    ],
+    leaderboard: [
+      { name: 'You', score: 1240 },
+      { name: 'Dr. Adhikari', score: 1420 },
+      { name: 'Supporter Sunita', score: 1190 },
+      { name: 'Guardian Mira', score: 980 },
+    ],
+  },
   clinicianUi: {
     riskFilter: 'all',
     dateFilter: 'all',
@@ -36,6 +70,7 @@ const state = {
   },
   clinicianPatients: [],
   clinicianAlerts: [],
+  patientHome: null,
 };
 
 function applyUxMode(mode) {
@@ -80,34 +115,75 @@ function getNavItem(screen) {
   return document.querySelector(`.nav-item[data-screen="${screen}"]`);
 }
 
+function safeInitScreeningPage() {
+  try {
+    initScreeningPage();
+  } catch {
+    // If screening constants are not initialized yet during early bootstrap,
+    // retry on the next tick after the script finishes evaluating.
+    setTimeout(() => {
+      try { initScreeningPage(); } catch {}
+    }, 0);
+  }
+}
+
 function navigateToScreen(screen, opts = {}) {
   const { updateHash = true } = opts;
-  const item = getNavItem(screen);
-  if (!item) return;
+  const activeRole = getSessionUser()?.role;
 
-  const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only');
-  if (hiddenByMode) {
-    const fallback = getNavItem('dashboard');
-    if (fallback) return navigateToScreen('dashboard', { updateHash });
-    return;
+  // Patient role cannot access provider/system-only screens.
+  if (activeRole === 'patient' && ['clinician', 'triage', 'alerts', 'compliance'].includes(screen)) {
+    return navigateToScreen('dashboard', { updateHash });
   }
 
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  item.classList.add('active');
+  if (screen === 'career') {
+    return navigateToScreen('dashboard', { updateHash });
+  }
+  const item = getNavItem(screen);
+
+  // Allow navigation even without a static nav item (IAM injected screens)
+  const screenEl = document.getElementById(`screen-${screen}`);
+  if (!item && !screenEl) return;
+
+  if (item) {
+    const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only') && screen !== 'screening';
+    if (hiddenByMode) {
+      const fallback = getNavItem('dashboard');
+      if (fallback) return navigateToScreen('dashboard', { updateHash });
+      return;
+    }
+  }
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const matches = n.dataset?.screen === screen;
+    n.classList.toggle('active', matches);
+  });
+
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active');
-    // Failsafe: enforce visibility at style level so only one screen is shown.
     s.style.display = 'none';
   });
-  const el = document.getElementById(`screen-${screen}`);
-  if (el) {
-    el.classList.add('active');
-    el.style.display = 'block';
+  if (screenEl) {
+    screenEl.classList.add('active');
+    screenEl.style.display = 'block';
+  }
+  refreshRevealTargets();
+  if (screen === 'copilot') bindChatUi();
+
+  if (screen === 'screening') {
+    safeInitScreeningPage();
+    requestAnimationFrame(() => safeInitScreeningPage());
   }
 
   if (updateHash) {
     const next = `#${screen}`;
     if (window.location.hash !== next) window.location.hash = next;
+  }
+
+  // Auto-close mobile sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
   }
 }
 
@@ -132,6 +208,26 @@ if (initialHashScreen) {
   navigateToScreen('dashboard', { updateHash: false });
 }
 
+// ── Mobile Menu Toggle ──
+const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('open');
+    }
+  });
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('open') &&
+        !sidebar.contains(e.target) &&
+        e.target !== mobileMenuBtn) {
+      sidebar.classList.remove('open');
+    }
+  });
+}
+
 function buildMoodHistory(seed) {
   const points = [];
   for (let i = 29; i >= 0; i--) {
@@ -154,8 +250,8 @@ function buildVitalsHistory(anxietySeed, sleepSeed) {
 const CLINICIAN_MOCK_PATIENTS = [
   {
     id: 'p-a-2847',
-    code: 'Patient A-2847',
-    name: 'Patient A-2847',
+    code: 'User A-2847',
+    name: 'User A-2847',
     age: 31,
     gender: 'Female',
     location: 'Rural Area',
@@ -175,8 +271,8 @@ const CLINICIAN_MOCK_PATIENTS = [
       { day: '3/24', score: 4.6 },
     ],
     summaryGeneratedAt: 'March 24, 2026 at 2:23 PM',
-    liveAlertCopy: 'Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.',
-    fullVoiceSummary: 'Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.',
+    liveAlertCopy: 'User A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.',
+    fullVoiceSummary: 'User reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: User is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. User expressed willingness to continue treatment and found breathing exercises helpful.',
     medications: [
       { name: 'Sertraline 50mg', dose: 'Daily - Morning' },
       { name: 'Lorazepam 0.5mg', dose: 'As needed' },
@@ -189,13 +285,13 @@ const CLINICIAN_MOCK_PATIENTS = [
     ],
     aiSummaries: [
       'Discussed work anxiety and social isolation as top stressors.',
-      'Breathing exercises are helping and patient remains treatment-engaged.',
+      'Breathing exercises are helping and user remains treatment-engaged.',
       'No suicidal ideation mentioned in this latest voice check-in.'
     ]
   },
   {
     id: 'p-002',
-    code: 'Patient B-4172',
+    code: 'User B-4172',
     name: 'Maya Gurung',
     age: 29,
     gender: 'Female',
@@ -207,8 +303,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 31,
     checkinFrequency: '5/week',
     summaryGeneratedAt: 'March 27, 2026 at 11:10 AM',
-    liveAlertCopy: 'Patient B-4172 reported escalating workplace uncertainty and evening panic spikes in latest check-in.',
-    fullVoiceSummary: 'Patient described increased rumination about role changes and reduced confidence in team communication. Sleep was inconsistent at 5-6 hours, with improved mornings after guided breathing. Appetite is stable and patient remains engaged in scheduled sessions. No self-harm language detected, but anxiety intensity increased over three days.',
+    liveAlertCopy: 'User B-4172 reported escalating workplace uncertainty and evening panic spikes in latest check-in.',
+    fullVoiceSummary: 'User described increased rumination about role changes and reduced confidence in team communication. Sleep was inconsistent at 5-6 hours, with improved mornings after guided breathing. Appetite is stable and user remains engaged in scheduled sessions. No self-harm language detected, but anxiety intensity increased over three days.',
     medications: [
       { name: 'Escitalopram 10mg', dose: 'Daily - Morning' },
       { name: 'Propranolol 10mg', dose: 'Before high-stress events' },
@@ -228,7 +324,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-003',
-    code: 'Patient C-1028',
+    code: 'User C-1028',
     name: 'Rohan Karki',
     age: 34,
     gender: 'Male',
@@ -240,8 +336,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 63,
     checkinFrequency: '7/week',
     summaryGeneratedAt: 'March 28, 2026 at 8:02 AM',
-    liveAlertCopy: 'Patient C-1028 shows stable baseline with no emergency escalation currently required.',
-    fullVoiceSummary: 'Patient reported improved work-life boundaries and consistent recovery habits. Sleep quality is 7-8 hours nightly, and mood remains steady through high-demand periods. Continues journaling and physical activity with strong adherence. No acute warning phrases detected; maintenance plan is working effectively.',
+    liveAlertCopy: 'User C-1028 shows stable baseline with no emergency escalation currently required.',
+    fullVoiceSummary: 'User reported improved work-life boundaries and consistent recovery habits. Sleep quality is 7-8 hours nightly, and mood remains steady through high-demand periods. Continues journaling and physical activity with strong adherence. No acute warning phrases detected; maintenance plan is working effectively.',
     medications: [
       { name: 'Sertraline 25mg', dose: 'Daily - Morning' },
       { name: 'Melatonin 3mg', dose: 'Nightly as needed' },
@@ -261,7 +357,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-004',
-    code: 'Patient D-6391',
+    code: 'User D-6391',
     name: 'Nisha Tamang',
     age: 20,
     gender: 'Female',
@@ -273,8 +369,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 18,
     checkinFrequency: '4/week',
     summaryGeneratedAt: 'March 28, 2026 at 9:40 AM',
-    liveAlertCopy: 'Patient D-6391 showed a sharp anxiety spike around assignment deadlines and family pressure triggers.',
-    fullVoiceSummary: 'Patient identified social pressure and academic uncertainty as current stress amplifiers. Sleep averaged 5 hours in the last two nights, with better mood after support chat scripts. Appetite remains mildly reduced, but patient is still attending sessions and practicing guided grounding. No suicidal ideation mentioned; monitor closely for exam-week escalation.',
+    liveAlertCopy: 'User D-6391 showed a sharp anxiety spike around assignment deadlines and family pressure triggers.',
+    fullVoiceSummary: 'User identified social pressure and academic uncertainty as current stress amplifiers. Sleep averaged 5 hours in the last two nights, with better mood after support chat scripts. Appetite remains mildly reduced, but user is still attending sessions and practicing guided grounding. No suicidal ideation mentioned; monitor closely for exam-week escalation.',
     medications: [
       { name: 'Fluoxetine 20mg', dose: 'Daily - Morning' },
       { name: 'Hydroxyzine 10mg', dose: 'As needed - Evening' },
@@ -294,7 +390,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-005',
-    code: 'Patient E-5510',
+    code: 'User E-5510',
     name: 'Sujan Rai',
     age: 26,
     gender: 'Male',
@@ -306,8 +402,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 12,
     checkinFrequency: '3/week',
     summaryGeneratedAt: 'March 28, 2026 at 10:04 AM',
-    liveAlertCopy: 'Patient E-5510 used repeated crisis language and reported severe sleep collapse in latest check-in.',
-    fullVoiceSummary: 'Patient described fear about financial instability and loss of role identity. Sleep dropped below 4 hours on consecutive nights, and hopeless statements increased in intensity. Positive marker: patient accepted immediate follow-up and agreed to contact a trusted support person. Escalation routing is recommended with same-day clinician outreach.',
+    liveAlertCopy: 'User E-5510 used repeated crisis language and reported severe sleep collapse in latest check-in.',
+    fullVoiceSummary: 'User described fear about financial instability and loss of role identity. Sleep dropped below 4 hours on consecutive nights, and hopeless statements increased in intensity. Positive marker: user accepted immediate follow-up and agreed to contact a trusted support person. Escalation routing is recommended with same-day clinician outreach.',
     medications: [
       { name: 'Venlafaxine 37.5mg', dose: 'Daily - Morning' },
       { name: 'Clonazepam 0.25mg', dose: 'Short-term as prescribed' },
@@ -331,7 +427,7 @@ const CLINICIAN_MOCK_ALERTS = [
   {
     id: 'a-001',
     patientId: 'p-a-2847',
-    patientName: 'Patient A-2847',
+    patientName: 'User A-2847',
     timestamp: '2026-03-28T09:12:00Z',
     event: 'High distress in latest voice check-in',
     acknowledged: false,
@@ -394,8 +490,35 @@ const WEB_DUMMY_ESCALATIONS = CLINICIAN_MOCK_ALERTS
     contacts: ['trusted-contact-1', 'local-health-post']
   }));
 
-function initClinicianDashboard() {
-  if (!state.clinicianPatients.length) state.clinicianPatients = CLINICIAN_MOCK_PATIENTS;
+async function initClinicianDashboard() {
+  // Try live API for doctor queue
+  if (!state.clinicianPatients.length) {
+    try {
+      const session = window.__aegisSession;
+      if (session?.token && (session?.user?.role === 'doctor' || session?.user?.role === 'super_admin')) {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch('http://localhost:4000/api/doctor/queue', { headers: hdrs });
+        const json = await res.json();
+        if (json.ok && json.data?.queue?.length) {
+          state.clinicianPatients = json.data.queue.map((q, i) => ({
+            id: q.anonymousId || `live-${i}`,
+            name: `User ${q.anonymousId || i}`,
+            age: '—', gender: '—',
+            location: 'Remote',
+            riskLevel: q.riskLevel || (q.latestRisk >= 70 ? 'high' : q.latestRisk >= 40 ? 'moderate' : 'low'),
+            score: q.latestRisk || q.entryCount * 10 || 50,
+            streak: q.entryCount || 1,
+            adherence: Math.min(100, (q.entryCount || 1) * 20),
+            summary: `${q.entryCount || 0} journal entries · Anonymous ID: ${q.anonymousId || 'N/A'}`,
+            assignedDate: new Date().toISOString().slice(0,10),
+            liveAlertCopy: 'No active alert'
+          }));
+        }
+      }
+    } catch {}
+    // Fallback to mock if API returned nothing
+    if (!state.clinicianPatients.length) state.clinicianPatients = CLINICIAN_MOCK_PATIENTS;
+  }
   if (!state.clinicianAlerts.length) state.clinicianAlerts = CLINICIAN_MOCK_ALERTS.map(a => ({ ...a }));
 
   const search = document.getElementById('clinician-search');
@@ -489,7 +612,7 @@ function initClinicianDashboard() {
     contactBtn.dataset.bound = 'true';
     contactBtn.addEventListener('click', () => {
       const active = state.clinicianPatients.find(p => p.id === state.clinicianUi.activePatientId);
-      const label = active?.code || active?.name || 'Selected patient';
+      const label = active?.code || active?.name || 'Selected user';
       showToast(`📞 Contact workflow opened for ${label}`);
     });
   }
@@ -554,29 +677,57 @@ document.querySelectorAll('.chip[data-lang]').forEach(chip => {
 });
 
 // ── Chat ──
-const chatInput = document.getElementById('chat-input');
-const chatSend = document.getElementById('chat-send');
-const chatMessages = document.getElementById('chat-messages');
+let chatInput = document.getElementById('chat-input');
+let chatSend = document.getElementById('chat-send');
+let chatMessages = document.getElementById('chat-messages');
 
-chatSend.addEventListener('click', sendChat);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+function bindChatUi() {
+  chatInput = document.getElementById('chat-input');
+  chatSend = document.getElementById('chat-send');
+  chatMessages = document.getElementById('chat-messages');
+  if (chatSend && chatInput && chatMessages) {
+    chatSend.onclick = sendChat;
+    chatInput.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    };
+  } else {
+    console.warn('Chat UI not initialized: missing chat elements.');
+  }
+}
+bindChatUi();
+document.addEventListener('DOMContentLoaded', bindChatUi);
 
 async function sendChat() {
-  const msg = chatInput.value.trim();
+  // Look up fresh to avoid null reference issues
+  const input = document.getElementById('chat-input');
+  const messages = document.getElementById('chat-messages');
+  if (!input || !messages) {
+    console.warn('Chat elements not found');
+    return;
+  }
+  
+  const msg = input.value.trim();
   if (!msg) return;
-  appendBubble(msg, 'user');
-  chatInput.value = '';
+  appendBubble(msg, 'user', messages);
+  input.value = '';
 
   // Show typing indicator
   const typingId = 'typing-' + Date.now();
-  chatMessages.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="chat-bubble bot"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  messages.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="chat-bubble bot"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`);
+  messages.scrollTop = messages.scrollHeight;
 
   let reply;
+  let timeout;
   try {
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`${API}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         message: msg,
         mood: +document.getElementById('sl-mood').value,
@@ -591,29 +742,40 @@ async function sendChat() {
         journalEmotion: 'neutral'
       })
     });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`chat API ${res.status}`);
     const raw = await res.json();
     const data = unwrapApi(raw);
     reply = data.reply;
-  } catch {
-    reply = `I hear you. Your current stress is ${document.getElementById('sl-stress').value}/10. Try a 4-4-4 breathing cycle right now, then note one thing you can control in the next hour.`;
+  } catch (err) {
+    reply = `I hear you. Your current stress is ${document.getElementById('sl-stress').value}/10. Try a 4-4-4 breathing cycle now, then note one thing you can control in the next hour. (${err?.message || 'offline'})`;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 
   const typingEl = document.getElementById(typingId);
   if (typingEl) typingEl.remove();
-  appendBubble(reply, 'bot');
+  if (!reply) reply = 'I am here and listening. Share one detail about what you need right now.';
+  appendBubble(reply, 'bot', messages);
 }
 
-function appendBubble(text, role) {
+function appendBubble(text, role, container) {
+  // Use provided container or look up fresh
+  if (!container) container = document.getElementById('chat-messages');
+  if (!container) return;
+  
   const time = new Date().toLocaleTimeString();
   const label = role === 'bot' ? 'Copilot' : 'You';
-  chatMessages.insertAdjacentHTML('beforeend',
+  container.insertAdjacentHTML('beforeend',
     `<div class="chat-bubble ${role}">${escapeHtml(text)}<div class="chat-bubble-meta">${label} · ${time}</div></div>`
   );
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  container.scrollTop = container.scrollHeight;
 }
 
 // ── Check-In ──
 document.getElementById('btn-checkin').addEventListener('click', runCheckin);
+const journalAiBtn = document.getElementById('btn-journal-ai');
+if (journalAiBtn) journalAiBtn.addEventListener('click', runJournalAiSuggest);
 
 async function runCheckin() {
   const btn = document.getElementById('btn-checkin');
@@ -621,7 +783,7 @@ async function runCheckin() {
   btn.disabled = true;
 
   const payload = {
-    userId: USER_ID,
+    userId: getActiveUserId(),
     roleContext: document.getElementById('career-role')?.value || 'student',
     mood: +document.getElementById('sl-mood').value,
     anxiety: +document.getElementById('sl-anxiety').value,
@@ -677,6 +839,48 @@ async function runCheckin() {
   btn.disabled = false;
 }
 
+async function runJournalAiSuggest() {
+  const btn = document.getElementById('btn-journal-ai');
+  const text = document.getElementById('journal-text')?.value?.trim();
+  const box = document.getElementById('journal-ai-box');
+  const out = document.getElementById('journal-ai-suggestion');
+  if (!text) { showToast('Write something in your journal first'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Thinking...'; }
+  if (box && out) { box.style.display = 'block'; out.textContent = 'Analyzing your note for patterns...'; }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        message: `You are a compassionate mental health copilot. Read this journal entry and reply with 2 concise suggestions (max 40 words total) and one grounding or CBT micro-action:\n\n${text}`,
+        mood: +document.getElementById('sl-mood').value,
+        anxiety: +document.getElementById('sl-anxiety').value,
+        stress: +document.getElementById('sl-stress').value,
+        sleepHours: +document.getElementById('sl-sleep').value,
+        personality: state.personality,
+        language: state.language,
+        memoryContext: state.memory.slice(0, 5)
+      })
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`AI suggest error ${res.status}`);
+    const raw = await res.json();
+    const data = unwrapApi(raw);
+    const reply = data.reply || data;
+    if (out) out.textContent = reply;
+    if (box) box.style.display = 'block';
+    showToast('🧠 Suggestions ready');
+  } catch (e) {
+    if (out) out.textContent = 'Offline. Try a 4-7-8 breath and write one thing you can control today.';
+    if (box) box.style.display = 'block';
+    showToast('⚠️ Could not fetch AI suggestions');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🧠 AI Suggest'; }
+}
+
 function renderCheckinResult(data) {
   const el = document.getElementById('checkin-result');
   const body = document.getElementById('checkin-result-body');
@@ -712,17 +916,59 @@ function renderCheckinResult(data) {
 }
 
 // ── Emergency ──
-document.getElementById('btn-emergency').addEventListener('click', async () => {
+async function triggerEmergencySOS() {
+  animateSosButtons();
   try {
+    const authHeaders = typeof window.__aegisGetAuthHeaders === 'function' ? window.__aegisGetAuthHeaders() : null;
+    const hasAuth = authHeaders && authHeaders.Authorization;
+
+    if (hasAuth) {
+      const res = await fetch(`${API}/api/severe/call/patient`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ reason: 'manual-emergency-sos', preferredTime: 'asap' })
+      });
+      const raw = await res.json();
+      const data = unwrapApi(raw);
+      if (raw?.ok === false) {
+        throw new Error(raw?.error?.message || 'Could not send SOS');
+      }
+      showToast(data?.message || '🚨 SOS sent to care team');
+      refreshRemote();
+      return;
+    }
+
     await fetch(`${API}/api/escalations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: USER_ID, severity: 'high', reason: 'manual-emergency-trigger', contacts: ['trusted-contact-1', 'local-health-post'] })
+      body: JSON.stringify({ userId: getActiveUserId(), severity: 'high', reason: 'manual-emergency-trigger', contacts: ['trusted-contact-1', 'local-health-post'] })
     });
     showToast('🚨 Emergency escalation sent to clinician and contacts');
     refreshRemote();
-  } catch { showToast('⚠️ Could not send escalation packet'); }
-});
+  } catch {
+    showToast('⚠️ Could not send emergency request');
+  }
+}
+
+const emergencyBtn = document.getElementById('btn-emergency');
+if (emergencyBtn) emergencyBtn.addEventListener('click', triggerEmergencySOS);
+
+const emergencyHomeBtn = document.getElementById('btn-emergency-home');
+if (emergencyHomeBtn) emergencyHomeBtn.addEventListener('click', triggerEmergencySOS);
+
+function animateSosButtons() {
+  [emergencyBtn, emergencyHomeBtn].forEach(btn => {
+    if (!btn) return;
+    btn.classList.add('sos-armed');
+    btn.disabled = true;
+    btn.textContent = '🚨 Sending...';
+    setTimeout(() => {
+      btn.classList.remove('sos-armed');
+      btn.disabled = false;
+      btn.textContent = btn.id === 'btn-emergency-home' ? '🚨 Emergency SOS' : '🚨 Trigger Emergency Escalation';
+    }, 2800);
+  });
+}
 
 // ── SMS Fallback ──
 document.getElementById('btn-sms-fallback').addEventListener('click', async () => {
@@ -731,7 +977,7 @@ document.getElementById('btn-sms-fallback').addEventListener('click', async () =
     const res = await fetch(`${API}/api/transport/sms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: USER_ID, riskScore: state.result.risk.score, riskLevel: state.result.risk.riskLevel, escalation: state.result.escalation })
+      body: JSON.stringify({ userId: getActiveUserId(), riskScore: state.result.risk.score, riskLevel: state.result.risk.riskLevel, escalation: state.result.escalation })
     });
     const raw = await res.json();
     const data = unwrapApi(raw);
@@ -816,6 +1062,16 @@ function updateDashboard() {
       rl.style.color = state.result.risk.score >= 70 ? 'var(--danger)' : state.result.risk.score >= 40 ? 'var(--warning)' : 'var(--success)';
     }
     if (rs) rs.textContent = state.result.risk.score + ' / 100';
+  } else if (state.patientHome) {
+    const rl = document.getElementById('dash-risk-label');
+    const rs = document.getElementById('dash-risk-score');
+    const urgent = state.patientHome.urgentCount || 0;
+    const level = urgent > 0 ? 'HIGH' : (state.patientHome.suggestConsultation ? 'MODERATE' : 'LOW');
+    if (rl) {
+      rl.textContent = level;
+      rl.style.color = urgent > 0 ? 'var(--danger)' : (state.patientHome.suggestConsultation ? 'var(--warning)' : 'var(--success)');
+    }
+    if (rs) rs.textContent = `Entries ${state.patientHome.entryCount} · Alerts ${urgent}`;
   }
 
   // Avatar
@@ -830,12 +1086,15 @@ function updateDashboard() {
 
 // ── Remote Data ──
 async function refreshRemote() {
+  const activeUserId = getActiveUserId();
+  const authHeaders = getOptionalAuthHeaders();
+
   try {
     const [trendRaw, recRaw, insRaw, escRaw] = await Promise.all([
-      fetch(`${API}/api/users/${USER_ID}/trends`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/records`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/insights`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/escalations`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/trends`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/records`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/insights`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/escalations`).then(r => r.json()),
     ]);
 
     const trendRes = unwrapApi(trendRaw);
@@ -848,20 +1107,83 @@ async function refreshRemote() {
     state.insights = insRes.insights || WEB_DUMMY_INSIGHTS;
     state.escalations = ((escRes.records && escRes.records.length) ? escRes.records : WEB_DUMMY_ESCALATIONS).slice(-8).reverse();
 
+    if (authHeaders) {
+      try {
+        const [journalsRaw, apptsRaw] = await Promise.all([
+          fetch(`${API}/api/journals/mine?limit=30`, { headers: authHeaders }).then(r => r.json()),
+          fetch(`${API}/api/appointments/mine`, { headers: authHeaders }).then(r => r.json()),
+        ]);
+        const jData = journalsRaw?.data || {};
+        const entries = jData.entries || jData.journals || [];
+        const stats = jData.stats || null;
+        const assessments = entries.flatMap((e) => e.doctorAssessments || []);
+        const urgentCount = assessments.filter((a) => a.severity === 'severe' || a.requiresImmediateCall || a.recommendsConsultation).length;
+        const appts = apptsRaw?.data?.appointments || apptsRaw?.appointments || [];
+        const upcoming = appts
+          .filter((a) => a.scheduledAt)
+          .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+
+        state.patientHome = {
+          entryCount: entries.length,
+          urgentCount,
+          suggestConsultation: !!jData.consultation?.suggest,
+          severeAlert: !!jData.severeAlert,
+          nextAppointmentAt: upcoming[0]?.scheduledAt || null,
+          avgSentiment: typeof stats?.avgSentiment === 'number' ? stats.avgSentiment : null,
+        };
+
+        if (typeof state.patientHome.avgSentiment === 'number') {
+          state.stability = Math.max(0, Math.min(100, Math.round(state.patientHome.avgSentiment)));
+        }
+
+        renderPatientDashboardRecommendations();
+      } catch {
+        state.patientHome = null;
+      }
+    }
+
     renderMoodCharts();
     renderClinicianRecords();
     renderInsights();
     renderAuditLog();
+    updateDashboard();
   } catch {
     state.trends = WEB_DUMMY_TRENDS;
     state.records = WEB_DUMMY_RECORDS.slice(-8).reverse();
     state.insights = WEB_DUMMY_INSIGHTS;
     state.escalations = WEB_DUMMY_ESCALATIONS.slice(-8).reverse();
+    state.patientHome = null;
     renderMoodCharts();
     renderClinicianRecords();
     renderInsights();
     renderAuditLog();
+    updateDashboard();
   }
+}
+
+// Allow IAM flow to force-refresh dashboard data right after login.
+window.__aegisRefreshDashboard = refreshRemote;
+
+function renderPatientDashboardRecommendations() {
+  const el = document.getElementById('dash-recommendations');
+  if (!el || !state.patientHome) return;
+
+  const lines = [];
+  if (state.patientHome.nextAppointmentAt) {
+    lines.push(`📅 Next consultation: ${new Date(state.patientHome.nextAppointmentAt).toLocaleString()}`);
+  } else {
+    lines.push('📅 No upcoming consultation yet. Book one if you want clinician support.');
+  }
+
+  if (state.patientHome.urgentCount > 0) {
+    lines.push(`🚨 ${state.patientHome.urgentCount} care team ping(s) need your attention. Open Care Operations.`);
+  } else {
+    lines.push('✅ No urgent care-team pings right now. Keep your daily rhythm.');
+  }
+
+  lines.push(`📝 Journal entries recorded: ${state.patientHome.entryCount}`);
+
+  el.innerHTML = lines.map((line) => `<div class="signal-item"><span class="signal-name">${escapeHtml(line)}</span></div>`).join('');
 }
 
 function renderMoodCharts() {
@@ -895,7 +1217,7 @@ function renderClinicianRecords() {
   });
 
   if (!filtered.length) {
-    listEl.innerHTML = '<div style="color:var(--text-muted);padding:18px;text-align:center;">No patients match your filters.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted);padding:18px;text-align:center;">No users match your filters.</div>';
   } else {
     const levelLabel = lvl => lvl === 'high' ? 'Severe' : lvl === 'moderate' ? 'Monitor' : 'Stable';
     const badgeCls = lvl => lvl === 'high' ? 'badge-high' : lvl === 'moderate' ? 'badge-moderate' : 'badge-low';
@@ -926,9 +1248,9 @@ function renderClinicianRecords() {
   setText('clinician-active-meta', active ? `${active.age} · ${active.gender} · ${active.location}` : '—');
   setText('clinician-active-streak', active ? `${active.streak}d` : '—');
   setText('clinician-active-adherence', active ? `${active.adherence}%` : '—');
-  setText('clinician-live-alert-title', `Live Emergency Alert - ${active?.location || 'Selected'} Patient`);
-  setText('clinician-live-alert-copy', active?.liveAlertCopy || 'No active live alert for selected patient.');
-  setText('clinician-summary-patient', active?.code || active?.name || 'Patient');
+  setText('clinician-live-alert-title', `Live Emergency Alert - ${active?.location || 'Selected'} User`);
+  setText('clinician-live-alert-copy', active?.liveAlertCopy || 'No active live alert for selected user.');
+  setText('clinician-summary-patient', active?.code || active?.name || 'User');
   setText('clinician-voice-summary', active?.fullVoiceSummary || 'No latest voice summary.');
   setText('clinician-generated-at', `Generated: ${active?.summaryGeneratedAt || new Date().toLocaleString()}`);
   const moodLabels = (active?.moodHistory || []).map(pt => pt.day).join(' · ');
@@ -1017,7 +1339,7 @@ function renderClinicianRecords() {
 
   const pushStatus = document.getElementById('clinician-push-status');
   if (pushStatus) {
-    pushStatus.textContent = ui.pushSuccess ? '✅ Successfully pushed to patient app.' : 'No pending push.';
+    pushStatus.textContent = ui.pushSuccess ? '✅ Successfully pushed to user app.' : 'No pending push.';
     pushStatus.style.color = ui.pushSuccess ? 'var(--success)' : 'var(--text-muted)';
     pushStatus.style.fontWeight = ui.pushSuccess ? '700' : '500';
   }
@@ -1060,11 +1382,207 @@ function showToast(msg) {
   setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }, 3500);
 }
 
+// ── Scheduled Check-In Call (Right to Decline) ──
+const CHECKIN_DECLINE_REASONS = ['Not in the mood', 'Busy right now', 'Feeling okay, skipping', 'Need more time'];
+
+function openCheckinCallOverlay() {
+  const overlay = document.getElementById('checkin-call-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  const status = document.getElementById('checkin-call-status');
+  if (status) status.textContent = '';
+}
+
+function closeCheckinCallOverlay() {
+  const overlay = document.getElementById('checkin-call-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function logCheckinDecline(reason) {
+  const status = document.getElementById('checkin-call-status');
+  if (status) status.textContent = 'Logging your choice...';
+  try {
+    const hdrs = (window.__aegisGetAuthHeaders && window.__aegisGetAuthHeaders()) || { 'Content-Type': 'application/json' };
+    if (!hdrs['Content-Type']) hdrs['Content-Type'] = 'application/json';
+    const res = await fetch(`${API}/api/journals/decline-checkin`, {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify({ reason: reason || 'unspecified' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (status) status.textContent = data.data?.message || 'Skip recorded. Streak preserved.';
+      showToast('⏭ Check-in skipped · streak preserved');
+    } else {
+      if (status) status.textContent = data.error?.message || 'Could not sync skip — noted locally.';
+      showToast('⚠️ Skip noted locally (sign in to sync)');
+    }
+  } catch {
+    if (status) status.textContent = 'Offline — skip noted locally.';
+    showToast('⚠️ Skip noted locally');
+  }
+}
+
+function handleDeclineCheckin(reason) {
+  closeCheckinCallOverlay();
+  logCheckinDecline(reason || 'Not specified');
+}
+
+function initCheckinCallUi() {
+  const openBtn = document.getElementById('btn-open-checkin-call');
+  if (openBtn && !openBtn.dataset.bound) {
+    openBtn.dataset.bound = 'true';
+    openBtn.addEventListener('click', () => openCheckinCallOverlay());
+  }
+
+  const quickSkip = document.getElementById('btn-decline-checkin-quick');
+  if (quickSkip && !quickSkip.dataset.bound) {
+    quickSkip.dataset.bound = 'true';
+    quickSkip.addEventListener('click', () => handleDeclineCheckin('Skipped from banner'));
+  }
+
+  const answerBtn = document.getElementById('btn-call-answer');
+  if (answerBtn && !answerBtn.dataset.bound) {
+    answerBtn.dataset.bound = 'true';
+    answerBtn.addEventListener('click', () => {
+      closeCheckinCallOverlay();
+      navigateToScreen('checkin');
+      showToast('💚 Starting your check-in now');
+    });
+  }
+
+  const closeBtn = document.getElementById('btn-call-close');
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.dataset.bound = 'true';
+    closeBtn.addEventListener('click', closeCheckinCallOverlay);
+  }
+
+  document.querySelectorAll('[data-checkin-reason]').forEach(btn => {
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => handleDeclineCheckin(btn.dataset.checkinReason || btn.textContent.trim()));
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCheckinCallOverlay();
+  });
+}
+
+// ── Gamification ──
+function renderGamification() {
+  const { gamify } = state;
+  const xpBar = document.getElementById('xp-bar');
+  const xpLevel = document.getElementById('xp-level');
+  const xpPoints = document.getElementById('xp-points');
+  if (xpBar) xpBar.style.width = Math.min(100, (gamify.xp / gamify.nextLevelXp) * 100) + '%';
+  if (xpLevel) xpLevel.textContent = `Level ${gamify.level} · Sprout`;
+  if (xpPoints) xpPoints.textContent = `${gamify.xp} / ${gamify.nextLevelXp} XP`;
+
+  const questList = document.getElementById('quest-list');
+  if (questList) {
+    questList.innerHTML = gamify.quests.map(q => `
+      <div class="quest-item ${q.done ? 'quest-done' : ''}">
+        <div>
+          <div style="font-weight:700;">${q.title}</div>
+          <div class="quest-meta">${q.type === 'daily' ? 'Daily' : 'Weekly'} · +${q.xp} XP</div>
+        </div>
+        <div class="quest-badge">${q.done ? '✅ Done' : '➕ ${q.xp} XP'}</div>
+      </div>
+    `).join('');
+  }
+
+  const lb = document.getElementById('leaderboard-list');
+  if (lb) {
+    lb.innerHTML = gamify.leaderboard
+      .sort((a,b) => b.score - a.score)
+      .map((p, idx) => `
+        <div class="leaderboard-row">
+          <div class="leaderboard-rank ${idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : ''}">${idx+1}</div>
+          <div style="flex:1;">${p.name}</div>
+          <div class="leaderboard-score">${p.score} pts</div>
+        </div>
+      `).join('');
+  }
+}
+
 // ── Helpers ──
 function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 function setTextAndColor(id, val, col) { const el = document.getElementById(id); if (el) { el.textContent = val; el.style.color = col; } }
 function setBarWidth(id, pct) { const el = document.getElementById(id); if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+let revealObserver = null;
+
+function initTopbarTelemetry() {
+  const dateEl = document.getElementById('topbar-date');
+  const deviceEl = document.getElementById('topbar-device');
+  if (!dateEl && !deviceEl) return;
+
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  const update = () => {
+    if (dateEl) dateEl.textContent = fmt.format(new Date());
+    if (deviceEl) {
+      const width = window.innerWidth;
+      const label = width < 768 ? 'Mobile' : width < 1100 ? 'Tablet' : 'Desktop';
+      deviceEl.textContent = `${label} • ${width}px`;
+    }
+  };
+
+  update();
+  setInterval(update, 60000);
+
+  let frame = 0;
+  window.addEventListener('resize', () => {
+    if (frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(update);
+  });
+}
+
+function refreshRevealTargets() {
+  const targets = [
+    ...document.querySelectorAll('.topbar'),
+    ...document.querySelectorAll('.screen.active .hero-banner'),
+    ...document.querySelectorAll('.screen.active .section-heading'),
+    ...document.querySelectorAll('.screen.active .glass-card'),
+    ...document.querySelectorAll('.screen.active .intervention-card'),
+  ];
+  if (!targets.length) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion || typeof IntersectionObserver === 'undefined') {
+    targets.forEach(node => {
+      node.classList.remove('reveal-ready');
+      node.classList.add('is-visible');
+    });
+    return;
+  }
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, {
+      threshold: 0.14,
+      rootMargin: '0px 0px -8% 0px',
+    });
+  }
+
+  targets.forEach((node, idx) => {
+    if (node.dataset.revealBound === 'true') return;
+    node.dataset.revealBound = 'true';
+    node.classList.add('reveal-ready');
+    node.style.transitionDelay = `${Math.min(idx * 35, 220)}ms`;
+    revealObserver.observe(node);
+  });
+}
 
 // ── Init ──
 initUxModeControls();
@@ -1073,6 +1591,10 @@ updateSignals();
 refreshRemote();
 initCareerSupportFeatures();
 initClinicianDashboard();
+initCheckinCallUi();
+renderGamification();
+initTopbarTelemetry();
+refreshRevealTargets();
 
 // Auto-update greeting based on time
 const hour = new Date().getHours();
@@ -1107,7 +1629,7 @@ async function startVoice() {
     document.getElementById('btn-voice-start').style.display = 'none';
     document.getElementById('btn-voice-stop').style.display = 'inline-flex';
     document.getElementById('btn-voice-stop').classList.add('recording-pulse');
-    document.getElementById('voice-timer').style.display = 'block';
+renderGamification();
     document.getElementById('voice-status').textContent = '🔴 Recording... speak naturally';
 
     // Timer
@@ -1115,14 +1637,13 @@ async function startVoice() {
       const elapsed = Math.floor((Date.now() - voiceStartTime) / 1000);
       const m = Math.floor(elapsed / 60);
       const s = elapsed % 60;
-      document.getElementById('voice-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const entryCount = state.patientHome?.entryCount ?? state.records.length;
+  setText('dash-xp', entryCount);
     }, 200);
 
     // Waveform
-    drawWaveform();
 
     // Speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SR();
       recognition.continuous = true;
@@ -1132,9 +1653,7 @@ async function startVoice() {
         let final = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           if (ev.results[i].isFinal) final += ev.results[i][0].transcript + ' ';
-          else interim += ev.results[i][0].transcript;
-        }
-        transcriptText += final;
+  showToast('🧘 Breathing exercise complete');
         document.getElementById('voice-transcript').textContent = transcriptText + interim;
       };
       recognition.onerror = () => {};
@@ -1251,6 +1770,22 @@ const LIKERT_OPTIONS = ['Not at all', 'Several days', 'More than half', 'Nearly 
 function renderScreeningQuestions(containerId, questions, prefix) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  
+  // If container already has static HTML questions, just bind event listeners
+  const existingQuestions = container.querySelectorAll('.screening-question');
+  if (existingQuestions.length > 0) {
+    // Questions already exist as static HTML, just bind events
+    container.querySelectorAll('.q-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const qId = opt.dataset.q;
+        container.querySelectorAll(`.q-option[data-q="${qId}"]`).forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+      });
+    });
+    return;
+  }
+  
+  // Fallback: render questions dynamically if not found in HTML
   container.innerHTML = questions.map((q, i) => `
     <div class="screening-question">
       <div class="q-text"><span class="q-number">${i + 1}</span>${q}</div>
@@ -1293,26 +1828,42 @@ function gad7Severity(score) {
   return { level: 'Severe', color: 'var(--danger)' };
 }
 
-renderScreeningQuestions('phq9-questions', PHQ9_QUESTIONS, 'phq9');
-renderScreeningQuestions('gad7-questions', GAD7_QUESTIONS, 'gad7');
+function initScreeningPage() {
+  const phqContainer = document.getElementById('phq9-questions');
+  const gadContainer = document.getElementById('gad7-questions');
+  if (!phqContainer || !gadContainer) return;
 
-document.getElementById('btn-score-phq9').addEventListener('click', () => {
-  const r = scoreScreening('phq9-questions', 'phq9', 9);
-  if (!r.complete) { showToast('⚠️ Please answer all 9 questions'); return; }
-  const s = phq9Severity(r.total);
-  document.getElementById('phq9-result').innerHTML = `<span style="color:${s.color}">${r.total}/27 — ${s.level} Depression</span>`;
-  state.phq9Score = r.total;
-  checkScreeningSummary();
-});
+  renderScreeningQuestions('phq9-questions', PHQ9_QUESTIONS, 'phq9');
+  renderScreeningQuestions('gad7-questions', GAD7_QUESTIONS, 'gad7');
 
-document.getElementById('btn-score-gad7').addEventListener('click', () => {
-  const r = scoreScreening('gad7-questions', 'gad7', 7);
-  if (!r.complete) { showToast('⚠️ Please answer all 7 questions'); return; }
-  const s = gad7Severity(r.total);
-  document.getElementById('gad7-result').innerHTML = `<span style="color:${s.color}">${r.total}/21 — ${s.level} Anxiety</span>`;
-  state.gad7Score = r.total;
-  checkScreeningSummary();
-});
+  const phqBtn = document.getElementById('btn-score-phq9');
+  if (phqBtn && !phqBtn.dataset.bound) {
+    phqBtn.dataset.bound = 'true';
+    phqBtn.addEventListener('click', () => {
+      const r = scoreScreening('phq9-questions', 'phq9', 9);
+      if (!r.complete) { showToast('⚠️ Please answer all 9 questions'); return; }
+      const s = phq9Severity(r.total);
+      document.getElementById('phq9-result').innerHTML = `<span style="color:${s.color}">${r.total}/27 — ${s.level} Depression</span>`;
+      state.phq9Score = r.total;
+      checkScreeningSummary();
+    });
+  }
+
+  const gadBtn = document.getElementById('btn-score-gad7');
+  if (gadBtn && !gadBtn.dataset.bound) {
+    gadBtn.dataset.bound = 'true';
+    gadBtn.addEventListener('click', () => {
+      const r = scoreScreening('gad7-questions', 'gad7', 7);
+      if (!r.complete) { showToast('⚠️ Please answer all 7 questions'); return; }
+      const s = gad7Severity(r.total);
+      document.getElementById('gad7-result').innerHTML = `<span style="color:${s.color}">${r.total}/21 — ${s.level} Anxiety</span>`;
+      state.gad7Score = r.total;
+      checkScreeningSummary();
+    });
+  }
+}
+
+initScreeningPage();
 
 function checkScreeningSummary() {
   if (state.phq9Score == null || state.gad7Score == null) return;
@@ -1414,6 +1965,155 @@ function finishBreathing() {
 }
 
 // ═══════════════════════════════════════════════
+// FEATURE: 5-4-3-2-1 Grounding Exercise
+// ═══════════════════════════════════════════════
+
+let groundingStep = 0;
+const groundingSteps = [
+  { num: 5, prompt: 'Name 5 things you can SEE around you.', placeholder: 'E.g., a lamp, a wall, a tree...' },
+  { num: 4, prompt: 'Name 4 things you can TOUCH.', placeholder: 'E.g., fabric, floor, your skin...' },
+  { num: 3, prompt: 'Name 3 things you can HEAR.', placeholder: 'E.g., traffic, birds, air conditioning...' },
+  { num: 2, prompt: 'Name 2 things you can SMELL.', placeholder: 'E.g., coffee, fresh air...' },
+  { num: 1, prompt: 'Name 1 thing you can TASTE.', placeholder: 'E.g., mint, salt, water...' }
+];
+
+function openGroundingModal() {
+  document.getElementById('grounding-modal').style.display = 'flex';
+  groundingStep = 0;
+  resetGroundingStep();
+}
+
+function closeGroundingModal() {
+  document.getElementById('grounding-modal').style.display = 'none';
+  groundingStep = 0;
+}
+
+function resetGroundingStep() {
+  const step = groundingSteps[groundingStep];
+  document.getElementById('grounding-step-chip').textContent = `Step ${groundingStep + 1} of 5`;
+  document.getElementById('grounding-prompt').textContent = step.prompt;
+  document.getElementById('grounding-input').placeholder = step.placeholder;
+  document.getElementById('grounding-input').value = '';
+  document.getElementById('grounding-progress').style.width = `${((groundingStep + 1) / 5) * 100}%`;
+  
+  const startBtn = document.getElementById('btn-grounding-start');
+  const nextBtn = document.getElementById('btn-grounding-next');
+  
+  if (groundingStep === 0) {
+    startBtn.style.display = 'inline-flex';
+    nextBtn.style.display = 'none';
+  } else {
+    startBtn.style.display = 'none';
+    nextBtn.style.display = 'inline-flex';
+  }
+}
+
+function nextGroundingStep() {
+  groundingStep++;
+  if (groundingStep >= groundingSteps.length) {
+    finishGrounding();
+    return;
+  }
+  resetGroundingStep();
+}
+
+function finishGrounding() {
+  const modal = document.getElementById('grounding-modal');
+  const body = modal.querySelector('.intervention-body');
+  body.innerHTML = `
+    <div style="text-align:center;padding:40px;">
+      <div style="font-size:64px;margin-bottom:20px;animation:avatarBob 3s ease-in-out;">✨</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:16px;">Grounding Complete!</div>
+      <div style="font-size:16px;color:var(--text-secondary);margin-bottom:24px;max-width:400px;">
+        You've engaged all 5 senses. You're here, present, and safe. Well done!
+      </div>
+      <button class="btn btn-primary" onclick="closeGroundingModal()">Close Exercise</button>
+    </div>
+  `;
+  state.avatarXp = Math.min(state.avatarXp + 8, 100);
+  updateDashboard();
+  showToast('🖐️ Grounding exercise complete — +8 XP earned');
+  setTimeout(() => {
+    closeGroundingModal();
+    openGroundingModal();
+  }, 3000);
+}
+
+// Add event listener for grounding start button
+if (document.getElementById('btn-grounding-start')) {
+  document.getElementById('btn-grounding-start').addEventListener('click', function() {
+    const input = document.getElementById('grounding-input').value.trim();
+    if (!input) {
+      showToast('Please write something first');
+      return;
+    }
+    nextGroundingStep();
+  });
+}
+
+if (document.getElementById('btn-grounding-next')) {
+  document.getElementById('btn-grounding-next').addEventListener('click', function() {
+    const input = document.getElementById('grounding-input').value.trim();
+    if (!input) {
+      showToast('Please write something first');
+      return;
+    }
+    nextGroundingStep();
+  });
+}
+
+// ═══════════════════════════════════════════════
+// FEATURE: CBT Thought Reframe Exercise
+// ═══════════════════════════════════════════════
+
+function openCbtModal() {
+  document.getElementById('cbt-modal').style.display = 'flex';
+  document.getElementById('cbt-worry').value = '';
+  document.getElementById('cbt-for').value = '';
+  document.getElementById('cbt-against').value = '';
+  document.getElementById('cbt-balanced').value = '';
+  document.getElementById('cbt-result').style.display = 'none';
+}
+
+function closeCbtModal() {
+  document.getElementById('cbt-modal').style.display = 'none';
+}
+
+function submitCBTReframe() {
+  const worry = document.getElementById('cbt-worry').value.trim();
+  const balanced = document.getElementById('cbt-balanced').value.trim();
+  
+  if (!worry) {
+    showToast('Please describe the worry thought');
+    return;
+  }
+  
+  if (!balanced) {
+    showToast('Please write a balanced reframe');
+    return;
+  }
+  
+  const resultEl = document.getElementById('cbt-result');
+  const resultText = document.getElementById('cbt-result-text');
+  
+  resultText.textContent = `Original: "${worry}"\n\nReframed: "${balanced}"`;
+  resultEl.style.display = 'block';
+  
+  state.avatarXp = Math.min(state.avatarXp + 10, 100);
+  updateDashboard();
+  showToast('🧠 CBT reframe complete — +10 XP earned');
+  
+  setTimeout(() => {
+    alert('Great cognitive work! This reframe will help you manage anxious thoughts. Write this down for future reference.');
+  }, 500);
+}
+
+// Add event listener for CBT submit button
+if (document.getElementById('btn-cbt-submit')) {
+  document.getElementById('btn-cbt-submit').addEventListener('click', submitCBTReframe);
+}
+
+// ═══════════════════════════════════════════════
 // FEATURE: PDF Clinical Report Export
 // ═══════════════════════════════════════════════
 
@@ -1427,10 +2127,10 @@ function exportPDF() {
   const gad = state.gad7Score != null ? `GAD-7: ${state.gad7Score}/21 (${gad7Severity(state.gad7Score).level})` : 'GAD-7: Not administered';
 
   const content = `
-AEGISSPEAK CLINICAL REPORT
+MENTAL COMPASS CLINICAL REPORT
 ══════════════════════════════════════════
 Generated: ${now}
-Patient ID: ${USER_ID}
+User ID: ${getActiveUserId()}
 Report Type: AI-Assisted Triage Summary
 
 RISK ASSESSMENT
@@ -1487,16 +2187,16 @@ Encryption: AES-256-GCM
 Compliance: HIPAA, GDPR
 
 ═══════════════════════════════════════
-This report was partially generated by AI (Google Gemini).
+This report was partially generated by AI.
 Clinical decisions should be made by qualified professionals.
-AegisSpeak — Privacy-First Mental Health Copilot
+Mental Compass — Privacy-First Mental Health Copilot
   `;
 
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AegisSpeak_Report_${new Date().toISOString().slice(0,10)}.txt`;
+  a.download = `MentalCompass_Report_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('📄 Clinical report exported');
@@ -1523,7 +2223,7 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AegisSpeak_Data_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `MentalCompass_Data_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('📊 Data exported as CSV');
@@ -1533,7 +2233,7 @@ function exportCSV() {
 // FEATURE: Keyboard Shortcuts
 // ═══════════════════════════════════════════════
 
-const NAV_KEYS = ['dashboard','copilot','checkin','career','support','community','vault','milestones','voice','signals','screening','insights','clinician','triage','alerts','compliance','privacy','wipelog'];
+const NAV_KEYS = ['dashboard','copilot','checkin','support','community','vault','milestones','voice','signals','screening','insights','clinician','triage','alerts','compliance','privacy','wipelog'];
 document.addEventListener('keydown', e => {
   // Don't trigger when typing in inputs
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;

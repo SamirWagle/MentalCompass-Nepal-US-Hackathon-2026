@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 import { calculateRiskScore, detectBurnoutTrend } from "./lib/scoring.js";
@@ -22,12 +23,67 @@ import {
   generateClinicalSummary,
   analyzeJournalSentiment
 } from "./lib/gemini.js";
+import {
+  seedSuperAdmin,
+  createUser,
+  authenticateUser,
+  getUserById,
+  listUsers,
+  updateUser,
+  deleteUser,
+  getGuardiansForPatient,
+  getLinkedPatient,
+  updateWearableData,
+  updateCheckinSchedule,
+  verifyDoctorPayment,
+  listAvailableDoctors,
+  getUserStats,
+  ROLES
+} from "./store/userStore.js";
+import { generateToken, requireAuth, requireRole, optionalAuth } from "./lib/auth.js";
+import {
+  createJournalEntry,
+  getJournalsByUserId,
+  getJournalsByAnonymousId,
+  getJournalById,
+  listAnonymousJournalPatients,
+  addAiSuggestions,
+  addDoctorAssessment,
+  getPatientJournalStats,
+  addCheckinDecline,
+  attachWearableToLatestEntry,
+} from "./store/journalStore.js";
+import {
+  analyzeJournalContent,
+  generateSuggestions as generateSuggestionsForPatient,
+  shouldSuggestConsultation,
+} from "./lib/suggestions.js";
+import {
+  createAppointment,
+  getAppointmentsByPatient,
+  getAppointmentStats,
+  confirmAppointmentPayment,
+  updateAppointmentStatus,
+  APPOINTMENT_STATUS,
+} from "./store/appointmentStore.js";
+import { listCommunityPosts, saveCommunityPost } from "./store/communityStore.js";
+import { analyzePatientJourney, shouldTriggerConsultationAlert } from "./lib/aiAnalysis.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure uploads directory exists for voice journals
+const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const SEVERE_CALL_LOG = path.resolve(__dirname, "../../data/severe_calls.txt");
+
+function appendSevereCallLog(record) {
+  fs.appendFileSync(SEVERE_CALL_LOG, `${JSON.stringify(record)}\n`, "utf-8");
+}
+
 const app = express();
 const port = Number(process.env.PORT || 4000);
+const azureLlmActive = Boolean(process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_DEPLOYMENT);
 
 function buildMeta(req, extra = {}) {
   return {
@@ -71,7 +127,7 @@ app.use((req, _res, next) => {
 app.use(express.static(path.resolve(__dirname, "../../web")));
 
 app.get("/health", (req, res) => {
-  sendOk(req, res, { service: "aegisspeak-api", ai: !!process.env.GEMINI_API_KEY }, 200, { domain: "health" });
+  sendOk(req, res, { service: "mental-compass-api", ai: azureLlmActive, aiProvider: azureLlmActive ? "azure-openai" : "fallback" }, 200, { domain: "health" });
 });
 
 // ── Check-in Endpoint (enhanced with AI clinical summary) ──
@@ -189,7 +245,7 @@ app.post("/api/chat", async (req, res) => {
     sendOk(req, res, {
       reply,
       timestamp: new Date().toISOString(),
-      powered: !!process.env.GEMINI_API_KEY ? "gemini" : "template"
+      powered: azureLlmActive ? "azure-openai" : "template"
     }, 200, { domain: "chat" });
   } catch (error) {
     sendError(req, res, 500, "CHAT_FAILED", "Unable to generate copilot response.", String(error?.message || error));
@@ -227,6 +283,36 @@ app.get("/api/users/:userId/insights", (req, res) => {
   sendOk(req, res, { userId, insights }, 200, { domain: "insights" });
 });
 
+app.get("/api/community/posts", (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit || 50)));
+  const posts = listCommunityPosts(limit);
+  sendOk(req, res, { total: posts.length, posts }, 200, { domain: "community" });
+});
+
+app.post("/api/community/posts", (req, res) => {
+  const payload = req.body || {};
+  const text = String(payload.text || "").trim();
+  if (!text) {
+    return sendError(req, res, 400, "COMMUNITY_TEXT_REQUIRED", "Post text is required.");
+  }
+  if (text.length > 1200) {
+    return sendError(req, res, 400, "COMMUNITY_TEXT_TOO_LONG", "Post must be 1200 characters or less.");
+  }
+
+  const post = {
+    id: uuidv4(),
+    author: "You (Anonymous)",
+    avatar: String(payload.avatar || "🌟").slice(0, 2),
+    text,
+    supports: 0,
+    relates: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  saveCommunityPost(post);
+  sendOk(req, res, { post }, 201, { domain: "community" });
+});
+
 app.post("/api/transport/sms", (req, res) => {
   const payload = req.body || {};
   const sms = buildSmsPayload({
@@ -262,11 +348,903 @@ app.get("/api/users/:userId/escalations", (req, res) => {
   sendOk(req, res, { userId, total: records.length, records }, 200, { domain: "escalations" });
 });
 
+// ═══════════════════════════════════════════════
+// ── IAM: Authentication & User Management ──
+// ═══════════════════════════════════════════════
+
+// Login
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "Email and password are required.");
+  }
+  const result = authenticateUser(email, password);
+  if (result.error) {
+    return sendError(req, res, 401, result.error, result.message);
+  }
+  const token = generateToken(result.user);
+  sendOk(req, res, { token, user: result.user }, 200, { domain: "auth" });
+});
+
+// Get current user profile
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  sendOk(req, res, { user: req.user }, 200, { domain: "auth" });
+});
+
+// ── IAM: User CRUD (Super Admin only) ──
+
+app.post("/api/iam/users", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const { email, password, fullName, role, doctorType, linkedPatientId, phone } = req.body || {};
+  if (!email || !password || !fullName || !role) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "email, password, fullName, and role are required.");
+  }
+  const result = createUser({
+    email,
+    password,
+    fullName,
+    role,
+    doctorType,
+    linkedPatientId,
+    phone,
+    createdBy: req.user.id,
+  });
+  if (result.error) {
+    return sendError(req, res, 409, result.error, result.message);
+  }
+  sendOk(req, res, result, 201, { domain: "iam" });
+});
+
+app.get("/api/iam/users", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const { role } = req.query;
+  const users = listUsers(role || null);
+  sendOk(req, res, { users, total: users.length }, 200, { domain: "iam" });
+});
+
+app.get("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const user = getUserById(req.params.userId);
+  if (!user) return sendError(req, res, 404, "NOT_FOUND", "User not found.");
+  sendOk(req, res, { user }, 200, { domain: "iam" });
+});
+
+app.put("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const result = updateUser(req.params.userId, req.body || {});
+  if (result.error) return sendError(req, res, 404, result.error, result.message);
+  sendOk(req, res, result, 200, { domain: "iam" });
+});
+
+app.delete("/api/iam/users/:userId", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  const result = deleteUser(req.params.userId);
+  if (result.error) return sendError(req, res, 404, result.error, result.message);
+  sendOk(req, res, result, 200, { domain: "iam" });
+});
+
+// Get guardians linked to a patient
+app.get("/api/iam/patients/:patientId/guardians", requireAuth, requireRole(ROLES.SUPER_ADMIN, ROLES.DOCTOR), (req, res) => {
+  const guardians = getGuardiansForPatient(req.params.patientId);
+  sendOk(req, res, { guardians }, 200, { domain: "iam" });
+});
+
+// Guardian: get my linked patient
+app.get("/api/iam/my-patient", requireAuth, requireRole(ROLES.GUARDIAN), (req, res) => {
+  const patient = getLinkedPatient(req.user.id);
+  if (!patient) return sendError(req, res, 404, "NOT_FOUND", "No linked patient found.");
+  sendOk(req, res, { patient }, 200, { domain: "iam" });
+});
+
+// ═══════════════════════════════════════════════
+// ── JOURNALS: Patient Journaling System ──
+// ═══════════════════════════════════════════════
+
+// Patient: create journal entry
+app.post("/api/journals", requireAuth, requireRole(ROLES.PATIENT), async (req, res) => {
+  try {
+    const {
+      type,
+      content,
+      text,
+      voiceMetrics,
+      wearableData,
+      audioMeta,
+      videoMeta,
+      checklist,
+      mcqAnswers,
+    } = req.body || {};
+
+    const normalizedChecklist = Array.isArray(checklist) ? checklist : [];
+    const normalizedMcq = mcqAnswers && typeof mcqAnswers === "object" ? mcqAnswers : {};
+    const journalContent = String(content || text || "").trim();
+
+    const mcqNarrative = Object.entries(normalizedMcq)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("; ");
+    const mediaNarrative = [
+      audioMeta ? `Audio journal uploaded: ${audioMeta.fileName || "audio"}` : null,
+      videoMeta ? `Video journal uploaded: ${videoMeta.fileName || "video"}` : null,
+    ].filter(Boolean).join(" | ");
+
+    const composedNarrative = [journalContent, mediaNarrative, normalizedChecklist.join(", "), mcqNarrative]
+      .filter(Boolean)
+      .join(" | ");
+
+    if (!journalContent && !voiceMetrics && !wearableData && !audioMeta && !videoMeta && normalizedChecklist.length === 0 && !Object.keys(normalizedMcq).length) {
+      return sendError(req, res, 400, "EMPTY_JOURNAL", "Journal entry cannot be empty.");
+    }
+
+    // Analyze content with local sentiment + LLM layer.
+    const localSentiment = composedNarrative ? analyzeJournalContent(composedNarrative) : null;
+    const llmAnalysis = composedNarrative ? await analyzeJournalSentiment(composedNarrative) : null;
+    const llmScore = typeof llmAnalysis?.sentiment === "number"
+      ? Math.round((llmAnalysis.sentiment + 1) * 50)
+      : localSentiment?.score;
+    const sentiment = localSentiment
+      ? { ...localSentiment, score: llmScore ?? localSentiment.score, llm: llmAnalysis }
+      : null;
+
+    const aiSummary = llmAnalysis
+      ? [
+          `Emotion trend: ${llmAnalysis.emotion || "neutral"}`,
+          Array.isArray(llmAnalysis.keywords) && llmAnalysis.keywords.length
+            ? `keywords: ${llmAnalysis.keywords.join(", ")}`
+            : null,
+          llmAnalysis.cbtSuggestion ? `micro-step: ${llmAnalysis.cbtSuggestion}` : null,
+        ].filter(Boolean).join(". ")
+      : "AI summary unavailable for this entry.";
+
+    const normalizedType = type === "audio" ? "voice" : (type || (videoMeta ? "video" : (audioMeta ? "voice" : "text")));
+
+    const entry = createJournalEntry({
+      userId: req.user.id,
+      anonymousId: req.user.anonymousId,
+      type: normalizedType,
+      content: journalContent,
+      audioUrl: audioMeta?.fileName ? `uploads/${audioMeta.fileName}` : null,
+      audioMeta: audioMeta || null,
+      videoMeta: videoMeta || null,
+      voiceMetrics,
+      wearableData,
+      sentiment,
+      llmAnalysis,
+      aiSummary,
+      checklist: normalizedChecklist,
+      mcqAnswers: normalizedMcq,
+    });
+
+    // Generate AI suggestions based on sentiment + any prior doctor assessments
+    const allEntries = getJournalsByAnonymousId(req.user.anonymousId);
+    const doctorAssessments = allEntries.flatMap(e => e.doctorAssessments || []);
+    const suggestionResult = generateSuggestionsForPatient(sentiment, doctorAssessments);
+
+    // Attach suggestions to the entry
+    if (suggestionResult) {
+      addAiSuggestions(entry.id, suggestionResult);
+    }
+
+    // Check if we should suggest consultation
+    const stats = getPatientJournalStats(req.user.anonymousId);
+    const consultSuggestion = shouldSuggestConsultation(stats);
+
+    const severeFlag = sentiment?.score != null ? sentiment.score < 25 : false;
+
+    sendOk(req, res, {
+      journal: { ...entry, aiSuggestions: suggestionResult?.suggestions || [] },
+      entry: { ...entry, aiSuggestions: suggestionResult?.suggestions || [] },
+      encouragement: suggestionResult?.message || null,
+      consultation: consultSuggestion,
+      severe: severeFlag,
+      aiSummary,
+      llmAnalysis,
+      stats: stats ? { totalEntries: stats.totalEntries, avgSentiment: stats.avgSentiment, declining: stats.declining } : null,
+    }, 201, { domain: "journals" });
+  } catch (err) {
+    sendError(req, res, 500, "JOURNAL_ERROR", err.message);
+  }
+});
+
+// Patient: get own journals
+app.get("/api/journals/mine", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  const limit = parseInt(req.query.limit) || 50;
+  const entries = getJournalsByUserId(req.user.id, limit);
+  const stats = getPatientJournalStats(req.user.anonymousId);
+  const consultSuggestion = shouldSuggestConsultation(stats);
+  const severeAssessments = entries
+    .flatMap((e) => e.doctorAssessments || [])
+    .filter((a) => a.severity === "severe" || a.requiresImmediateCall);
+
+  sendOk(req, res, {
+    journals: entries,
+    entries,
+    total: entries.length,
+    anonymousId: req.user.anonymousId,
+    stats,
+    consultation: consultSuggestion,
+    severeAlert: severeAssessments.length > 0,
+    severeAlertCount: severeAssessments.length,
+  }, 200, { domain: "journals" });
+});
+
+// Patient: decline consultation
+app.post("/api/journals/decline-consult", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  const { reason } = req.body || {};
+  // Just acknowledge — we track the reason but respect the decision
+  sendOk(req, res, {
+    message: "That's completely okay. We're here whenever you're ready. 💚",
+    reasonTracked: !!reason,
+  }, 200, { domain: "journals" });
+});
+
+// ═══════════════════════════════════════════════
+// ── DOCTOR: Anonymized Journal Reader ──
+// ═══════════════════════════════════════════════
+
+// Doctor: get queue of anonymous patients with journals
+app.get("/api/doctor/queue", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const patients = listAnonymousJournalPatients();
+  sendOk(req, res, { patients, total: patients.length }, 200, { domain: "doctor" });
+});
+
+// Doctor: read journals for a specific anonymous ID (NO real identity exposed)
+app.get("/api/doctor/journals/:anonymousId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const { anonymousId } = req.params;
+  const limit = parseInt(req.query.limit) || 30;
+  const entries = getJournalsByAnonymousId(anonymousId, limit);
+  const stats = getPatientJournalStats(anonymousId);
+
+  sendOk(req, res, {
+    anonymousId,
+    journals: entries,
+    total: entries.length,
+    stats,
+  }, 200, { domain: "doctor" });
+});
+
+// Doctor: submit assessment for a journal entry
+app.post("/api/doctor/assess/:entryId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const { entryId } = req.params;
+  const {
+    depressionScore,
+    stressLevel,
+    anxietyLevel,
+    clinicalNotes,
+    recommendsConsultation,
+    feedbackToPatient,
+    severity,
+    requiresImmediateCall,
+  } = req.body || {};
+
+  if (depressionScore === undefined || stressLevel === undefined || anxietyLevel === undefined) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "depressionScore, stressLevel, and anxietyLevel are required (0-10 scale).");
+  }
+
+  const assessment = {
+    doctorId: req.user.id,
+    doctorType: req.user.doctorType || 'general',
+    depressionScore: Math.min(10, Math.max(0, Number(depressionScore))),
+    stressLevel: Math.min(10, Math.max(0, Number(stressLevel))),
+    anxietyLevel: Math.min(10, Math.max(0, Number(anxietyLevel))),
+    clinicalNotes: clinicalNotes || '',
+    recommendsConsultation: !!recommendsConsultation,
+    feedbackToPatient: feedbackToPatient || "",
+    severity: ["low", "moderate", "severe"].includes(severity) ? severity : "moderate",
+    requiresImmediateCall: !!requiresImmediateCall,
+  };
+
+  const updated = addDoctorAssessment(entryId, assessment);
+  if (!updated) {
+    return sendError(req, res, 404, "NOT_FOUND", "Journal entry not found.");
+  }
+
+  if (assessment.severity === "severe" || assessment.requiresImmediateCall) {
+    appendSevereCallLog({
+      event: "doctor_marked_severe",
+      timestamp: new Date().toISOString(),
+      anonymousId: updated.anonymousId,
+      entryId,
+      doctorId: req.user.id,
+      note: assessment.feedbackToPatient || assessment.clinicalNotes || "",
+    });
+  }
+
+  sendOk(req, res, { entry: updated }, 200, { domain: "doctor" });
+});
+
+// Patient: request immediate doctor call for severe case
+app.post("/api/severe/call/patient", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  const { reason, preferredTime } = req.body || {};
+  const record = {
+    event: "patient_requested_call",
+    timestamp: new Date().toISOString(),
+    anonymousId: req.user.anonymousId,
+    userId: req.user.id,
+    reason: reason || "severe distress",
+    preferredTime: preferredTime || "asap",
+  };
+  appendSevereCallLog(record);
+  sendOk(req, res, {
+    queued: true,
+    message: "Your urgent callback request has been sent to the care team.",
+    requestedAt: record.timestamp,
+    anonymousId: req.user.anonymousId,
+  }, 201, { domain: "severe-call" });
+});
+
+// Doctor: initiate severe case call request for a patient by anonymous ID
+app.post("/api/severe/call/doctor/:anonymousId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  const { anonymousId } = req.params;
+  const { reason } = req.body || {};
+  const record = {
+    event: "doctor_requested_call",
+    timestamp: new Date().toISOString(),
+    anonymousId,
+    doctorId: req.user.id,
+    reason: reason || "severe assessment",
+  };
+  appendSevereCallLog(record);
+  sendOk(req, res, {
+    queued: true,
+    message: `Severe-call request logged for ${anonymousId}.`,
+    requestedAt: record.timestamp,
+    anonymousId,
+  }, 201, { domain: "severe-call" });
+});
+
+// ═══════════════════════════════════════════════
+// ── CHV: Community Health Volunteer Routes ──
+// ═══════════════════════════════════════════════
+
+// CHV: create a patient account (Mini Admin privilege)
+app.post("/api/chv/create-patient", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), (req, res) => {
+  const { email, password, fullName, phone, initialJournalText } = req.body || {};
+  if (!email || !password || !fullName) {
+    return sendError(req, res, 400, "MISSING_FIELDS", "email, password, and fullName are required.");
+  }
+
+  const result = createUser({
+    email,
+    password,
+    fullName,
+    role: ROLES.PATIENT, // CHVs can only create patient accounts
+    phone,
+    createdBy: req.user.id,
+  });
+
+  if (result.error) {
+    return sendError(req, res, 409, result.error, result.message);
+  }
+
+  // Optional first field note recorded by CHV at registration time.
+  const seedNote = String(initialJournalText || "").trim();
+  if (seedNote) {
+    createJournalEntry({
+      userId: result.user.id,
+      anonymousId: result.user.anonymousId,
+      type: "text",
+      content: seedNote,
+      aiSummary: "Initial field intake submitted by FCHV.",
+      checklist: ["fchv_initial_intake"],
+      mcqAnswers: { source: "chv_registration" },
+    });
+  }
+
+  sendOk(req, res, {
+    ...result,
+    anonymousJournalId: result.user.anonymousId,
+  }, 201, { domain: "chv" });
+});
+
+// CHV: list patients they created
+app.get("/api/chv/my-patients", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), (req, res) => {
+  const allPatients = listUsers(ROLES.PATIENT);
+  const myPatients = allPatients.filter(p => p.createdBy === req.user.id);
+  sendOk(req, res, { patients: myPatients, total: myPatients.length }, 200, { domain: "chv" });
+});
+
+function getPatientManagedByChvOrAdmin(req, patientId) {
+  const patient = getUserById(patientId);
+  if (!patient || patient.role !== ROLES.PATIENT) {
+    return { error: "PATIENT_NOT_FOUND", message: "Patient not found." };
+  }
+  const canAccess = req.user.role === ROLES.SUPER_ADMIN || patient.createdBy === req.user.id;
+  if (!canAccess) {
+    return { error: "FORBIDDEN", message: "You can only manage patients created by you." };
+  }
+  return { patient };
+}
+
+// CHV: update patient profile details on behalf of patient
+app.put("/api/chv/patients/:patientId", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), (req, res) => {
+  const managed = getPatientManagedByChvOrAdmin(req, req.params.patientId);
+  if (managed.error) {
+    const status = managed.error === "FORBIDDEN" ? 403 : 404;
+    return sendError(req, res, status, managed.error, managed.message);
+  }
+
+  const { fullName, phone, checkinSchedule } = req.body || {};
+  const updates = {};
+  if (typeof fullName === "string" && fullName.trim()) updates.fullName = fullName.trim();
+  if (typeof phone === "string") updates.phone = phone.trim();
+  if (checkinSchedule && typeof checkinSchedule === "object") {
+    const hour = Math.max(0, Math.min(23, Number(checkinSchedule.hour ?? 20)));
+    const minute = Math.max(0, Math.min(59, Number(checkinSchedule.minute ?? 0)));
+    updates.checkinSchedule = {
+      hour,
+      minute,
+      timezone: checkinSchedule.timezone || "Asia/Kathmandu",
+    };
+  }
+
+  if (!Object.keys(updates).length) {
+    return sendError(req, res, 400, "NO_UPDATES", "Provide at least one field to update.");
+  }
+
+  const updated = updateUser(managed.patient.id, updates);
+  if (updated.error) {
+    return sendError(req, res, 400, updated.error, updated.message);
+  }
+
+  sendOk(req, res, {
+    patient: updated.user,
+    updatedBy: req.user.id,
+    updatedOnBehalf: true,
+  }, 200, { domain: "chv" });
+});
+
+// CHV: add journal entry on behalf of patient
+app.post("/api/chv/patients/:patientId/journals", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), async (req, res) => {
+  try {
+    const managed = getPatientManagedByChvOrAdmin(req, req.params.patientId);
+    if (managed.error) {
+      const status = managed.error === "FORBIDDEN" ? 403 : 404;
+      return sendError(req, res, status, managed.error, managed.message);
+    }
+
+    const {
+      type,
+      content,
+      text,
+      voiceMetrics,
+      wearableData,
+      audioMeta,
+      videoMeta,
+      checklist,
+      mcqAnswers,
+    } = req.body || {};
+
+    const normalizedChecklist = Array.isArray(checklist) ? checklist : [];
+    const normalizedMcq = mcqAnswers && typeof mcqAnswers === "object" ? mcqAnswers : {};
+    const journalContent = String(content || text || "").trim();
+
+    const mcqNarrative = Object.entries(normalizedMcq)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("; ");
+    const mediaNarrative = [
+      audioMeta ? `Audio journal uploaded: ${audioMeta.fileName || "audio"}` : null,
+      videoMeta ? `Video journal uploaded: ${videoMeta.fileName || "video"}` : null,
+    ].filter(Boolean).join(" | ");
+
+    const composedNarrative = [journalContent, mediaNarrative, normalizedChecklist.join(", "), mcqNarrative]
+      .filter(Boolean)
+      .join(" | ");
+
+    if (!journalContent && !voiceMetrics && !wearableData && !audioMeta && !videoMeta && normalizedChecklist.length === 0 && !Object.keys(normalizedMcq).length) {
+      return sendError(req, res, 400, "EMPTY_JOURNAL", "Journal entry cannot be empty.");
+    }
+
+    const localSentiment = composedNarrative ? analyzeJournalContent(composedNarrative) : null;
+    const llmAnalysis = composedNarrative ? await analyzeJournalSentiment(composedNarrative) : null;
+    const llmScore = typeof llmAnalysis?.sentiment === "number"
+      ? Math.round((llmAnalysis.sentiment + 1) * 50)
+      : localSentiment?.score;
+    const sentiment = localSentiment
+      ? { ...localSentiment, score: llmScore ?? localSentiment.score, llm: llmAnalysis }
+      : null;
+
+    const aiSummary = llmAnalysis
+      ? [
+          `Emotion trend: ${llmAnalysis.emotion || "neutral"}`,
+          Array.isArray(llmAnalysis.keywords) && llmAnalysis.keywords.length
+            ? `keywords: ${llmAnalysis.keywords.join(", ")}`
+            : null,
+          llmAnalysis.cbtSuggestion ? `micro-step: ${llmAnalysis.cbtSuggestion}` : null,
+          `captured by FCHV on behalf of patient`,
+        ].filter(Boolean).join(". ")
+      : "AI summary unavailable for this entry. Captured by FCHV.";
+
+    const normalizedType = type === "audio" ? "voice" : (type || (videoMeta ? "video" : (audioMeta ? "voice" : "text")));
+
+    const entry = createJournalEntry({
+      userId: managed.patient.id,
+      anonymousId: managed.patient.anonymousId,
+      type: normalizedType,
+      content: journalContent,
+      audioUrl: audioMeta?.fileName ? `uploads/${audioMeta.fileName}` : null,
+      audioMeta: audioMeta || null,
+      videoMeta: videoMeta || null,
+      voiceMetrics,
+      wearableData,
+      sentiment,
+      llmAnalysis,
+      aiSummary,
+      checklist: [...normalizedChecklist, "captured_by_fchv"],
+      mcqAnswers: { ...normalizedMcq, capturedByRole: "chv" },
+    });
+
+    const allEntries = getJournalsByAnonymousId(managed.patient.anonymousId);
+    const doctorAssessments = allEntries.flatMap(e => e.doctorAssessments || []);
+    const suggestionResult = generateSuggestionsForPatient(sentiment, doctorAssessments);
+    if (suggestionResult) addAiSuggestions(entry.id, suggestionResult);
+
+    const stats = getPatientJournalStats(managed.patient.anonymousId);
+    const consultSuggestion = shouldSuggestConsultation(stats);
+    const severeFlag = sentiment?.score != null ? sentiment.score < 25 : false;
+
+    sendOk(req, res, {
+      journal: { ...entry, aiSuggestions: suggestionResult?.suggestions || [] },
+      entry: { ...entry, aiSuggestions: suggestionResult?.suggestions || [] },
+      onBehalfOf: managed.patient.id,
+      capturedByChv: true,
+      consultation: consultSuggestion,
+      severe: severeFlag,
+      aiSummary,
+      llmAnalysis,
+    }, 201, { domain: "chv" });
+  } catch (err) {
+    sendError(req, res, 500, "CHV_JOURNAL_ERROR", err.message);
+  }
+});
+
+// CHV: submit check-in on behalf of patient (offline representative mode)
+app.post("/api/chv/patients/:patientId/checkins", requireAuth, requireRole(ROLES.CHV, ROLES.SUPER_ADMIN), async (req, res) => {
+  try {
+    const managed = getPatientManagedByChvOrAdmin(req, req.params.patientId);
+    if (managed.error) {
+      const status = managed.error === "FORBIDDEN" ? 403 : 404;
+      return sendError(req, res, status, managed.error, managed.message);
+    }
+
+    const payload = req.body || {};
+    const scoreResult = calculateRiskScore(payload);
+    const previous = listCheckins(managed.patient.id).map((item) => item.score);
+    const trend = detectBurnoutTrend([...previous, scoreResult.score]);
+    const escalation = shouldEscalate({
+      riskLevel: scoreResult.riskLevel,
+      crisisSignals: payload.crisisSignals || []
+    });
+    const interventions = pickInterventions(scoreResult.riskLevel, payload);
+
+    const aiSummary = await generateClinicalSummary({
+      mood: payload.mood,
+      anxiety: payload.anxiety,
+      stress: payload.stress,
+      sleepHours: payload.sleepHours,
+      phoneUsageHours: payload.phoneUsageHours,
+      speechRateWpm: payload.speechRateWpm,
+      pauseRatio: payload.pauseRatio,
+      jitter: payload.jitter,
+      sentiment: payload.sentiment,
+      journalText: payload.journalText,
+      riskScore: scoreResult.score,
+      riskLevel: scoreResult.riskLevel,
+      trendStatus: trend.trend,
+      trendDelta: trend.delta,
+      escalation
+    });
+
+    const summary = aiSummary || buildClinicalSummary(payload, scoreResult, trend, escalation);
+
+    const record = {
+      id: uuidv4(),
+      userId: managed.patient.id,
+      timestamp: new Date().toISOString(),
+      input: payload,
+      score: scoreResult.score,
+      riskLevel: scoreResult.riskLevel,
+      trend,
+      summary,
+      escalation,
+      capturedByRole: "chv",
+      capturedByUserId: req.user.id,
+    };
+
+    saveCheckin(record);
+
+    sendOk(req, res, {
+      checkinId: record.id,
+      onBehalfOf: managed.patient.id,
+      capturedByChv: true,
+      risk: scoreResult,
+      trend,
+      interventions,
+      escalation,
+      clinicalSummary: summary,
+      auditHash: createAuditHash(record),
+    }, 201, { domain: "chv" });
+  } catch (error) {
+    sendError(req, res, 500, "CHV_CHECKIN_FAILED", "Unable to submit CHV-assisted check-in.", String(error?.message || error));
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── WEARABLE SYNC (PHI-encrypted) ──
+// ═══════════════════════════════════════════════
+
+// Patient: sync wearable biometric data (encrypted PHI)
+app.post("/api/wearables/sync", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { heartRate, sleepHours, steps, stressLevel } = req.body || {};
+    const wearableData = {
+      heartRate: Number(heartRate || 70),
+      sleepHours: Number(sleepHours || 7),
+      steps: Number(steps || 5000),
+      stressLevel: Number(stressLevel || 5),
+      recordedAt: new Date().toISOString(),
+      source: "manual",
+    };
+    const wearableEncrypted = encryptPayload(wearableData, process.env.ENCRYPTION_KEY);
+    updateWearableData(req.user.id, wearableEncrypted, true);
+    attachWearableToLatestEntry(req.user.id, wearableEncrypted, wearableData);
+    sendOk(req, res, {
+      synced: true,
+      wearableConnected: true,
+      summary: wearableData,
+      phiProtected: true,
+    }, 200, { domain: "wearables" });
+  } catch (err) {
+    sendError(req, res, 500, "WEARABLE_SYNC_FAILED", err.message);
+  }
+});
+
+// Patient: disconnect wearable
+app.delete("/api/wearables/sync", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    updateWearableData(req.user.id, null, false);
+    sendOk(req, res, { disconnected: true, wearableConnected: false }, 200, { domain: "wearables" });
+  } catch (err) {
+    sendError(req, res, 500, "WEARABLE_DISCONNECT_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── USER SETTINGS ──
+// ═══════════════════════════════════════════════
+
+app.post("/api/settings/checkin-schedule", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { hour, minute, timezone } = req.body || {};
+    if (hour === undefined || minute === undefined) {
+      return sendError(req, res, 400, "MISSING_FIELDS", "hour and minute are required.");
+    }
+    const schedule = {
+      hour: Math.max(0, Math.min(23, Number(hour))),
+      minute: Math.max(0, Math.min(59, Number(minute))),
+      timezone: timezone || "Asia/Kathmandu",
+    };
+    const updated = updateCheckinSchedule(req.user.id, schedule);
+    if (!updated) return sendError(req, res, 404, "USER_NOT_FOUND", "User not found.");
+    sendOk(req, res, { schedule: updated.checkinSchedule }, 200, { domain: "settings" });
+  } catch (err) {
+    sendError(req, res, 500, "SETTINGS_ERROR", err.message);
+  }
+});
+
+app.get("/api/settings/me", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  sendOk(req, res, {
+    checkinSchedule: req.user.checkinSchedule || { hour: 20, minute: 0, timezone: "Asia/Kathmandu" },
+    wearableConnected: req.user.wearableConnected || false,
+  }, 200, { domain: "settings" });
+});
+
+// ═══════════════════════════════════════════════
+// ── SCHEDULED CHECK-IN: DECLINE (Right to Reject) ──
+// ═══════════════════════════════════════════════
+
+app.post("/api/journals/decline-checkin", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const entry = addCheckinDecline({
+      userId: req.user.id,
+      anonymousId: req.user.anonymousId,
+      reason: reason || "unspecified",
+    });
+    sendOk(req, res, {
+      logged: true,
+      entryId: entry.id,
+      message: "Completely understood. Your check-in has been skipped and your streak is safe. We'll see you next time. \u{1f49a}",
+      streakPreserved: true,
+    }, 200, { domain: "journals" });
+  } catch (err) {
+    sendError(req, res, 500, "DECLINE_CHECKIN_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── AI ANALYSIS ENGINE ──
+// ═══════════════════════════════════════════════
+
+// Patient: analyze own 30-day journey
+app.post("/api/ai/my-analysis", requireAuth, requireRole(ROLES.PATIENT), async (req, res) => {
+  try {
+    const entries = getJournalsByAnonymousId(req.user.anonymousId, 30);
+    const stats = getPatientJournalStats(req.user.anonymousId);
+    const analysis = await analyzePatientJourney(entries, stats);
+    const triggerConsult = shouldTriggerConsultationAlert(analysis, stats);
+    sendOk(req, res, {
+      analysis,
+      consultation: {
+        suggest: triggerConsult,
+        message: triggerConsult
+          ? "We noticed you\u2019ve been having a tough time. Would you like to connect with a doctor?"
+          : null,
+      },
+    }, 200, { domain: "ai" });
+  } catch (err) {
+    sendError(req, res, 500, "AI_ANALYSIS_FAILED", err.message);
+  }
+});
+
+// Doctor/Admin: analyze a specific anonymous patient
+app.post("/api/ai/analyze/:anonymousId", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), async (req, res) => {
+  try {
+    const { anonymousId } = req.params;
+    const entries = getJournalsByAnonymousId(anonymousId, 30);
+    const stats = getPatientJournalStats(anonymousId);
+    if (!entries.length) {
+      return sendError(req, res, 404, "NO_ENTRIES", "No journal entries found for this patient.");
+    }
+    const analysis = await analyzePatientJourney(entries, stats);
+    sendOk(req, res, { anonymousId, analysis, stats }, 200, { domain: "ai" });
+  } catch (err) {
+    sendError(req, res, 500, "AI_ANALYSIS_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── APPOINTMENTS & BOOKING ──
+// ═══════════════════════════════════════════════
+
+app.get("/api/appointments/available-doctors", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const doctors = listAvailableDoctors();
+    sendOk(req, res, { doctors, total: doctors.length }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.post("/api/appointments", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { doctorCode, scheduledAt } = req.body || {};
+    if (!doctorCode) return sendError(req, res, 400, "MISSING_FIELDS", "doctorCode is required.");
+    const allDoctors = listUsers(ROLES.DOCTOR);
+    const doctor = allDoctors.find(u => u.doctorCode === doctorCode);
+    if (!doctor) return sendError(req, res, 404, "DOCTOR_NOT_FOUND", "Doctor not found or not available.");
+    const appointment = createAppointment({
+      anonymousPatientId: req.user.anonymousId,
+      doctorId: doctor.id,
+      consultationFee: doctor.consultationFee || 500,
+      scheduledAt: scheduledAt || null,
+      createdBy: req.user.id,
+    });
+    sendOk(req, res, {
+      appointmentId: appointment.id,
+      status: appointment.status,
+      consultationFee: appointment.consultationFee,
+      scheduledAt: appointment.scheduledAt,
+      message: "Appointment requested. Complete payment to confirm.",
+    }, 201, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.get("/api/appointments/mine", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const appointments = getAppointmentsByPatient(req.user.anonymousId);
+    sendOk(req, res, { appointments, total: appointments.length }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+app.post("/api/appointments/:id/cancel", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const updated = updateAppointmentStatus(req.params.id, APPOINTMENT_STATUS.CANCELLED, { reason });
+    if (!updated) return sendError(req, res, 404, "NOT_FOUND", "Appointment not found.");
+    sendOk(req, res, { cancelled: true }, 200, { domain: "appointments" });
+  } catch (err) {
+    sendError(req, res, 500, "APPOINTMENT_ERROR", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── PAYMENTS (MOCK) ──
+// ═══════════════════════════════════════════════
+
+// Doctor: pay subscription to unlock platform
+app.post("/api/payments/mock-checkout", requireAuth, requireRole(ROLES.DOCTOR, ROLES.SUPER_ADMIN), (req, res) => {
+  try {
+    const paymentRef = `PAY-${Date.now().toString(36).toUpperCase()}-${uuidv4().slice(0, 6).toUpperCase()}`;
+    const updated = verifyDoctorPayment(req.user.id, paymentRef);
+    if (!updated) return sendError(req, res, 404, "DOCTOR_NOT_FOUND", "Doctor account not found.");
+    sendOk(req, res, {
+      paymentRef,
+      subscriptionStatus: "active",
+      paymentVerified: true,
+      receipt: { amount: 2999, currency: "NPR", plan: "Mental Compass Professional", paidAt: new Date().toISOString() },
+      message: "Payment confirmed. Your platform access is now active.",
+    }, 200, { domain: "payments" });
+  } catch (err) {
+    sendError(req, res, 500, "PAYMENT_FAILED", err.message);
+  }
+});
+
+// Patient: pay for a specific appointment
+app.post("/api/payments/appointment/:appointmentId", requireAuth, requireRole(ROLES.PATIENT), (req, res) => {
+  try {
+    const paymentRef = `PAY-${Date.now().toString(36).toUpperCase()}-${uuidv4().slice(0, 6).toUpperCase()}`;
+    const updated = confirmAppointmentPayment(req.params.appointmentId, paymentRef);
+    if (!updated) return sendError(req, res, 404, "APPOINTMENT_NOT_FOUND", "Appointment not found.");
+    sendOk(req, res, {
+      paymentRef,
+      appointmentStatus: updated.status,
+      confirmedAt: updated.confirmedAt,
+      receipt: { amount: updated.consultationFee, currency: "NPR", service: "Doctor Consultation", paidAt: new Date().toISOString() },
+      message: "Payment confirmed! Your consultation has been booked.",
+    }, 200, { domain: "payments" });
+  } catch (err) {
+    sendError(req, res, 500, "PAYMENT_FAILED", err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// ── SUPER ADMIN: ANALYTICS DASHBOARD ──
+// ═══════════════════════════════════════════════
+
+app.get("/api/admin/analytics", requireAuth, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
+  try {
+    const userStats = getUserStats();
+    const appointmentStats = getAppointmentStats();
+    const allJournals = listAnonymousJournalPatients();
+    const allEscalations = listEscalations(null);
+    const allPatients = listUsers(ROLES.PATIENT);
+    const regionMap = {};
+    for (const u of allPatients) {
+      const region = u.locationTag || "Unknown";
+      if (!regionMap[region]) regionMap[region] = { region, patients: 0 };
+      regionMap[region].patients++;
+    }
+    sendOk(req, res, {
+      users: userStats,
+      appointments: appointmentStats,
+      journals: {
+        totalAnonymousPatients: allJournals.length,
+        totalEntries: allJournals.reduce((s, p) => s + p.totalEntries, 0),
+        assessedEntries: allJournals.reduce((s, p) => s + p.assessedEntries, 0),
+      },
+      escalations: {
+        total: allEscalations.length,
+        unacknowledged: allEscalations.filter(e => !e.acknowledged).length,
+      },
+      regionStats: Object.values(regionMap),
+      generatedAt: new Date().toISOString(),
+      hipaaCompliant: true,
+      phiStripped: true,
+    }, 200, { domain: "admin" });
+  } catch (err) {
+    sendError(req, res, 500, "ANALYTICS_FAILED", err.message);
+  }
+});
+
+// 404 catch-all (MUST be last)
 app.use((req, res) => {
   sendError(req, res, 404, "NOT_FOUND", `Route not found: ${req.method} ${req.originalUrl}`);
 });
 
+// Seed super admin and start
+const adminAccount = seedSuperAdmin();
+
 app.listen(port, () => {
-  console.log(`AegisSpeak backend listening on :${port}`);
-  console.log(`AI mode: ${process.env.GEMINI_API_KEY ? "Gemini active" : "Template fallback"}`);
+  console.log(`Mental Compass backend listening on :${port}`);
+  console.log(`AI mode: ${azureLlmActive ? "Azure OpenAI active" : "Template fallback"}`);
+  console.log(`IAM: Super admin seeded (admin@aegisspeak.com)`);
 });

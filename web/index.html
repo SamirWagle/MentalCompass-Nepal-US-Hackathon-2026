@@ -3,14 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AegisSpeak — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence." />
-  <title>AegisSpeak · AI Mental Health Copilot</title>
+  <meta name="description" content="Mental Compass — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence. Free & confidential counseling for users, doctors, guardians." />
+  <title>Mental Compass · AI Mental Health Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0..1" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  <link rel="icon" href="logo.png" />
 </head>
 <body>
 
+<a href="#main-content" class="skip-nav">Skip to main content</a>
+
 <div class="ambient-bg"></div>
+<canvas id="bg-3d-canvas" class="bg-3d-canvas" aria-hidden="true"></canvas>
+
+<button id="global-logout" class="global-logout" aria-label="Log out" title="Log out" style="display:none;">⏻</button>
+
+<button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open navigation menu">☰</button>
 
 <div class="app-shell">
 
@@ -18,9 +29,9 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <a class="sidebar-logo" href="#">
-        <div class="logo-icon">🛡️</div>
+        <div class="logo-icon"><img src="logo.png" alt="Mental Compass logo" class="brand-logo-img" /></div>
         <div>
-          <div class="logo-text">AegisSpeak</div>
+          <div class="logo-text">Mental Compass</div>
           <div class="logo-sub">Mental Health Companion</div>
         </div>
       </a>
@@ -33,76 +44,91 @@
     <nav class="sidebar-nav">
       <div class="nav-section-label">Wellness</div>
       <a class="nav-item active" data-screen="dashboard" href="#">
-        <span class="nav-icon">◎</span><span class="nav-label">Home</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">space_dashboard</span></span><span class="nav-label">Home</span>
       </a>
       <a class="nav-item" data-screen="copilot" href="#">
-        <span class="nav-icon">◉</span><span class="nav-label">Talk to AI</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">chat_bubble</span></span><span class="nav-label">Talk to AI</span>
       </a>
       <a class="nav-item" data-screen="checkin" href="#">
-        <span class="nav-icon">◌</span><span class="nav-label">Daily Check-In</span>
-      </a>
-      <a class="nav-item" data-screen="career" href="#">
-        <span class="nav-icon">🧭</span><span class="nav-label">Career Compass</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">event_note</span></span><span class="nav-label">Daily Check-In</span>
       </a>
       <a class="nav-item" data-screen="support" href="#">
-        <span class="nav-icon">🤝</span><span class="nav-label">Early Support</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">favorite</span></span><span class="nav-label">Early Support</span>
       </a>
       <a class="nav-item" data-screen="community" href="#">
-        <span class="nav-icon">💬</span><span class="nav-label">Community</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">groups</span></span><span class="nav-label">Community</span>
       </a>
       <a class="nav-item" data-screen="vault" href="#">
-        <span class="nav-icon">📚</span><span class="nav-label">Learn & Grow</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">auto_stories</span></span><span class="nav-label">Learn & Grow</span>
       </a>
       <a class="nav-item" data-screen="milestones" href="#">
-        <span class="nav-icon">🏆</span><span class="nav-label">My Journey</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">timeline</span></span><span class="nav-label">My Journey</span>
       </a>
 
       <div class="nav-section-label full-only">Advanced</div>
       <a class="nav-item full-only" data-screen="voice" href="#">
-        <span class="nav-icon">🎤</span><span class="nav-label">Voice Lab</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">mic</span></span><span class="nav-label">Voice Lab</span>
       </a>
       <a class="nav-item full-only" data-screen="signals" href="#">
-        <span class="nav-icon">📡</span><span class="nav-label">Signals</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">podcasts</span></span><span class="nav-label">Signals</span>
       </a>
       <a class="nav-item full-only" data-screen="screening" href="#">
-        <span class="nav-icon">📝</span><span class="nav-label">Screening</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">fact_check</span></span><span class="nav-label">Screening</span>
       </a>
       <a class="nav-item full-only" data-screen="insights" href="#">
-        <span class="nav-icon">🔮</span><span class="nav-label">Insights</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">insights</span></span><span class="nav-label">Insights</span>
       </a>
 
       <div class="nav-section-label full-only">Provider</div>
       <a class="nav-item" data-screen="clinician" href="#">
-        <span class="nav-icon">🏥</span><span class="nav-label">Clinician</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">medical_services</span></span><span class="nav-label">Clinician</span>
       </a>
       <a class="nav-item full-only" data-screen="triage" href="#">
-        <span class="nav-icon">🚦</span><span class="nav-label">Triage List</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">rule</span></span><span class="nav-label">Triage List</span>
       </a>
       <a class="nav-item full-only" data-screen="alerts" href="#">
-        <span class="nav-icon">🚨</span><span class="nav-label">Alerts</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">notification_important</span></span><span class="nav-label">Alerts</span>
       </a>
       <a class="nav-item full-only" data-screen="compliance" href="#">
-        <span class="nav-icon">✅</span><span class="nav-label">Compliance</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">verified_user</span></span><span class="nav-label">Compliance</span>
       </a>
 
       <div class="nav-section-label full-only">System</div>
       <a class="nav-item full-only" data-screen="privacy" href="#">
-        <span class="nav-icon">🔒</span><span class="nav-label">Privacy & Security</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">lock</span></span><span class="nav-label">Privacy & Security</span>
       </a>
       <a class="nav-item full-only" data-screen="wipelog" href="#">
-        <span class="nav-icon">🗑️</span><span class="nav-label">Wipe Log</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">delete</span></span><span class="nav-label">Wipe Log</span>
       </a>
     </nav>
 
-    <div class="sidebar-footer">
-      <div id="calm-mode-notice" class="calm-notice">WHO-aligned Calm UX: reduced choices and lower cognitive load.</div>
-      HIPAA · GDPR Compliant<br/>Ephemeral Edge Processing
-      <div style="margin-top:8px;font-size:10px;opacity:0.6;">Press number keys to switch tabs</div>
-    </div>
+    <div class="sidebar-footer"></div>
   </aside>
 
   <!-- ═══ Main Content ═══ -->
-  <main class="main-content">
+  <main class="main-content" id="main-content" role="main">
+    <div class="content-frame">
+      <header class="topbar" aria-label="Global quick actions">
+        <div class="topbar-heading">
+          <div class="topbar-eyebrow">Calm, clear, secure</div>
+          <div class="topbar-title">Your daily mental health space</div>
+          <div class="topbar-meta">
+            <span class="topbar-meta-pill" id="topbar-date"></span>
+            <span class="topbar-meta-pill" id="topbar-device"></span>
+          </div>
+          <div class="topbar-tags">
+            <span class="topbar-chip"><span class="material-symbols-rounded">shield_lock</span>Private by default</span>
+            <span class="topbar-chip success"><span class="material-symbols-rounded">radio_button_checked</span>Edge live</span>
+            <span class="topbar-chip neutral"><span class="material-symbols-rounded">monitor_heart</span>On-device biomarker scan</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost topbar-btn" type="button" onclick="navigateToScreen('checkin')"><span class="material-symbols-rounded">event_note</span>Check-In</button>
+          <button class="btn btn-outline topbar-btn" type="button" onclick="navigateToScreen('copilot')"><span class="material-symbols-rounded">chat</span>Talk to AI</button>
+          <button class="btn btn-primary topbar-btn" type="button" onclick="navigateToScreen('support')"><span class="material-symbols-rounded">favorite</span>Early Support</button>
+          <button class="btn btn-danger topbar-btn sos-ambient" type="button" onclick="document.getElementById('btn-emergency-home')?.click()"><span class="material-symbols-rounded">emergency</span>SOS</button>
+        </div>
+      </header>
 
     <!-- ═══ DASHBOARD ═══ -->
     <div class="screen active" id="screen-dashboard">
@@ -110,7 +136,7 @@
         <div class="hero-top">
           <div>
             <div class="hero-greeting">Good afternoon</div>
-            <h1 class="hero-title">AegisSpeak Dashboard</h1>
+            <h1 class="hero-title">Mental Compass Dashboard</h1>
             <p class="hero-subtitle">Predictive, personalized, privacy-first care</p>
           </div>
           <div class="hero-live-badge"><span class="live-dot"></span> Edge Processing Active</div>
@@ -127,15 +153,19 @@
             <div class="stat-change down">↓ monitoring</div>
           </div>
           <div class="hero-stat">
-            <div class="stat-label">Companion XP</div>
+            <div class="stat-label">Journal Entries</div>
             <div class="stat-value success" id="dash-xp">18</div>
-            <div class="stat-change flat">🌱 Sprout</div>
+            <div class="stat-change flat">active</div>
           </div>
           <div class="hero-stat">
             <div class="stat-label">Risk Level</div>
             <div class="stat-value" id="dash-risk-label" style="color:var(--success)">LOW</div>
             <div class="stat-change flat" id="dash-risk-score">—</div>
           </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-danger sos-ambient" id="btn-emergency-home" type="button">🚨 Emergency SOS</button>
+          <span style="font-size:12px;color:var(--text-muted);align-self:center;">Urgent help request to care team</span>
         </div>
       </div>
 
@@ -192,12 +222,12 @@
           <div class="intervention-title">4-4-4 Breathing</div>
           <div class="intervention-desc">Guided 60-second exercise</div>
         </div>
-        <div class="glass-card intervention-card" onclick="showToast('🖐 Name 5 see · 4 touch · 3 hear · 2 smell · 1 taste')">
+        <div class="glass-card intervention-card" onclick="openGroundingModal()">
           <div class="intervention-icon">🖐️</div>
           <div class="intervention-title">5-4-3-2-1 Grounding</div>
           <div class="intervention-desc">Sensory awareness exercise</div>
         </div>
-        <div class="glass-card intervention-card" onclick="showToast('🧠 Write worry → Evidence For → Evidence Against → Balanced Thought')">
+        <div class="glass-card intervention-card" onclick="openCbtModal()">
           <div class="intervention-icon">🧠</div>
           <div class="intervention-title">CBT Thought Reframe</div>
           <div class="intervention-desc">Cognitive restructuring</div>
@@ -215,15 +245,11 @@
           </div>
         </div>
         <div class="glass-card">
-          <div class="card-title">Emotional Companion</div>
-          <div class="card-subtitle">AI avatar that evolves with your resilience</div>
-          <div class="avatar-display">
-            <div class="avatar-emoji" id="avatar-emoji">🌱</div>
-            <div class="avatar-stage" id="avatar-stage">Sprout</div>
-            <div class="avatar-xp-text">18 / 100 XP</div>
-            <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" id="avatar-xp-bar" style="width:18%"></div></div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Earn XP by completing check-ins & exercises</div>
-          </div>
+          <div class="card-title">Support Snapshot</div>
+          <div class="card-subtitle">Practical next actions for your day</div>
+          <div class="signal-item"><span class="signal-name">🧩 1 grounding session + 1 short journal note recommended now.</span></div>
+          <div class="signal-item"><span class="signal-name">💬 If stress remains high after 15 minutes, request a care-team follow-up.</span></div>
+          <div class="signal-item"><span class="signal-name">🌙 Keep tonight's wind-down window protected for better sleep recovery.</span></div>
         </div>
       </div>
     </div>
@@ -231,7 +257,7 @@
     <!-- ═══ COPILOT CHAT ═══ -->
     <div class="screen" id="screen-copilot">
       <div class="section-heading">
-        <div><div class="section-title">AI Copilot</div><div class="section-subtitle">Memory-aware CBT companion · Powered by Gemini</div></div>
+        <div><div class="section-title">AI Copilot</div><div class="section-subtitle">Memory-aware CBT companion · Powered by Azure OpenAI</div></div>
       </div>
       <div class="chip-row">
         <span class="chip active" data-personality="calm">🧘 Calm</span>
@@ -250,7 +276,7 @@
         <div class="chat-container">
           <div class="chat-messages" id="chat-messages">
             <div class="chat-bubble bot">
-              Hello 👋 I'm your AegisSpeak copilot. Tell me how you're feeling right now, and I'll adapt to your emotional context over time.
+              Hello 👋 I'm your Mental Compass copilot. Tell me how you're feeling right now, and I'll adapt to your emotional context over time.
               <div class="chat-bubble-meta">Copilot · Just now</div>
             </div>
           </div>
@@ -263,7 +289,7 @@
           </div>
           <div class="chat-input-row">
             <textarea class="chat-input" id="chat-input" rows="1" placeholder="Tell Copilot how you feel..." aria-label="Chat message input"></textarea>
-            <button class="chat-send-btn" id="chat-send" title="Send" aria-label="Send message">▶</button>
+            <button class="chat-send-btn" type="button" id="chat-send" onclick="sendChat()" title="Send" aria-label="Send message">▶</button>
           </div>
         </div>
       </div>
@@ -273,6 +299,17 @@
     <div class="screen" id="screen-checkin">
       <div class="section-heading">
         <div><div class="section-title">Daily Check-In</div><div class="section-subtitle">Active + passive biometric inputs for AI triage</div></div>
+      </div>
+      <div class="glass-card mb-24 checkin-call-banner" aria-label="Scheduled check-in call">
+        <div>
+          <div class="card-title">Scheduled Check-In Call</div>
+          <div class="card-subtitle">Your streak is safe — you can always decline</div>
+          <div class="checkin-call-note">We respect your consent. Skipping a check-in keeps your streak intact and logs an anonymous reason.</div>
+        </div>
+        <div class="checkin-call-actions">
+          <button class="btn btn-outline" id="btn-open-checkin-call">▶ Start Check-In Call</button>
+          <button class="btn btn-ghost" id="btn-decline-checkin-quick">⏭ Skip Today</button>
+        </div>
       </div>
       <div class="grid-2 gap-24 mb-24">
         <div class="glass-card">
@@ -332,8 +369,13 @@
         <div class="card-title">📝 AI-Assisted Journaling</div>
         <div class="card-subtitle">Write freely · emotional markers auto-detected</div>
         <textarea class="text-area" id="journal-text" placeholder="Write about how you're feeling today. The AI will detect emotional patterns and suggest CBT actions..."></textarea>
-        <div style="margin-top:16px;display:flex;gap:12px;align-items:center;">
-          <button class="btn btn-primary btn-full" id="btn-checkin">🔬 Run Predictive Analysis</button>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="btn-journal-ai" onclick="runJournalAiSuggest()">🧠 AI Suggest</button>
+          <button class="btn btn-primary" id="btn-checkin" onclick="runCheckin()">🔬 Run Predictive Analysis</button>
+        </div>
+        <div class="plan-box" id="journal-ai-box" style="display:none;margin-top:12px;">
+          <div class="plan-label">AI Suggestions</div>
+          <div class="plan-text" id="journal-ai-suggestion">AI is thinking...</div>
         </div>
       </div>
       <div class="glass-card" id="checkin-result" style="display:none;">
@@ -544,9 +586,91 @@
     <div class="screen" id="screen-screening">
       <div class="section-heading"><div><div class="section-title">Clinical Screening</div><div class="section-subtitle">Validated PHQ-9 Depression & GAD-7 Anxiety screening instruments</div></div></div>
       <div class="glass-card mb-24">
-        <div class="card-title">PHQ-9 · Patient Health Questionnaire</div>
+        <div class="card-title">PHQ-9 · Depression Questionnaire</div>
         <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
-        <div id="phq9-questions"></div>
+        <div id="phq9-questions">
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">1</span>Little interest or pleasure in doing things</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-0" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-0" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-0" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-0" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">2</span>Feeling down, depressed, or hopeless</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-1" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-1" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-1" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-1" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">3</span>Trouble falling or staying asleep, or sleeping too much</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-2" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-2" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-2" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-2" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">4</span>Feeling tired or having little energy</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-3" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-3" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-3" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-3" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">5</span>Poor appetite or overeating</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-4" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-4" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-4" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-4" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">6</span>Feeling bad about yourself — or that you are a failure</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-5" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-5" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-5" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-5" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">7</span>Trouble concentrating on things, such as reading or watching TV</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-6" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-6" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-6" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-6" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">8</span>Moving or speaking slowly, or being fidgety/restless</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-7" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-7" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-7" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-7" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">9</span>Thoughts that you would be better off dead, or of hurting yourself</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-8" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-8" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-8" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-8" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
           <button class="btn btn-primary" id="btn-score-phq9">Calculate PHQ-9 Score</button>
           <div id="phq9-result" style="font-size:18px;font-weight:700;"></div>
@@ -555,7 +679,71 @@
       <div class="glass-card mb-24">
         <div class="card-title">GAD-7 · Generalized Anxiety Disorder Scale</div>
         <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
-        <div id="gad7-questions"></div>
+        <div id="gad7-questions">
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">1</span>Feeling nervous, anxious, or on edge</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-0" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-0" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-0" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-0" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">2</span>Not being able to stop or control worrying</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-1" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-1" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-1" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-1" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">3</span>Worrying too much about different things</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-2" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-2" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-2" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-2" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">4</span>Trouble relaxing</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-3" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-3" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-3" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-3" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">5</span>Being so restless that it's hard to sit still</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-4" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-4" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-4" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-4" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">6</span>Becoming easily annoyed or irritable</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-5" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-5" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-5" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-5" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">7</span>Feeling afraid, as if something awful might happen</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-6" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-6" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-6" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-6" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
           <button class="btn btn-primary" id="btn-score-gad7">Calculate GAD-7 Score</button>
           <div id="gad7-result" style="font-size:18px;font-weight:700;"></div>
@@ -596,9 +784,9 @@
 
       <div class="clinician-layout">
         <div class="glass-card clinician-master">
-          <div class="card-title">Patient Triage List</div>
+          <div class="card-title">User Triage List</div>
           <div class="card-subtitle">Search and filter by risk and assigned date</div>
-          <input class="text-area clinician-search" id="clinician-search" placeholder="Search patient by name or location" style="min-height:48px;resize:none;" />
+          <input class="text-area clinician-search" id="clinician-search" placeholder="Search user by name or location" style="min-height:48px;resize:none;" />
           <div class="clinician-filter-row" id="clinician-risk-filters" style="margin-top:10px;">
             <button class="chip active" data-risk="all">All</button>
             <button class="chip" data-risk="high" style="border-color:var(--danger);color:var(--danger);">Severe</button>
@@ -626,19 +814,19 @@
           </div>
 
           <div class="record-item clinician-live-alert" style="margin-top:14px;">
-            <div class="card-title" id="clinician-live-alert-title" style="font-size:16px;color:var(--danger);">Live Emergency Alert - Patient</div>
-            <div class="record-body" id="clinician-live-alert-copy">Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.</div>
+            <div class="card-title" id="clinician-live-alert-title" style="font-size:16px;color:var(--danger);">Live Emergency Alert - User</div>
+            <div class="record-body" id="clinician-live-alert-copy">User A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-              <button class="btn btn-danger" id="btn-contact-patient">Contact Patient Immediately</button>
+              <button class="btn btn-danger" id="btn-contact-patient">Contact User Immediately</button>
               <button class="btn btn-outline" id="btn-review-summary">Review Full Summary</button>
             </div>
           </div>
 
           <div class="record-item mb-24" id="clinician-summary-section">
-            <div class="card-title" style="font-size:18px;">Clinical Summary - <span id="clinician-summary-patient">Patient A-2847</span></div>
+            <div class="card-title" style="font-size:18px;">Clinical Summary - <span id="clinician-summary-patient">User A-2847</span></div>
             <div class="card-subtitle">Latest Voice Check-In Summary</div>
             <div class="record-body" id="clinician-voice-summary">
-              Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.
+              User reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: User is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. User expressed willingness to continue treatment and found breathing exercises helpful.
             </div>
             <div style="margin-top:10px;font-size:12px;color:var(--text-muted);" id="clinician-generated-at">Generated: March 24, 2026 at 2:23 PM</div>
           </div>
@@ -704,15 +892,15 @@
               </div>
               <div>
                 <div class="form-label">Journal Prompt</div>
-                <input id="clinician-journal-prompt" class="text-area" style="min-height:48px;resize:none;" value="Enter a new milestone or task for the patient (e.g., Practice deep breathing for 10 minutes daily)" />
+                <input id="clinician-journal-prompt" class="text-area" style="min-height:48px;resize:none;" value="Enter a new milestone or task for the user (e.g., Practice deep breathing for 10 minutes daily)" />
               </div>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-              <button class="btn btn-primary" id="btn-push-patient">📤 Push to Patient's Mobile App</button>
+              <button class="btn btn-primary" id="btn-push-patient">📤 Push to User's Mobile App</button>
               <button class="btn btn-ghost" id="btn-save-draft">💾 Save as Draft</button>
               <div id="clinician-push-status" style="font-size:13px;color:var(--text-muted);">No pending push.</div>
             </div>
-            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">This milestone will instantly appear in the patient's "Milestones &amp; Rewards" section.</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">This milestone will instantly appear in the user's "Milestones &amp; Rewards" section.</div>
           </div>
 
           <div class="record-item">
@@ -722,7 +910,7 @@
               <div class="spec-item"><div class="spec-label">Voice Files Stored</div><div class="spec-value" style="color:var(--accent);">0 (None)</div></div>
               <div class="spec-item"><div class="spec-label">HIPAA Compliant</div><div class="spec-value" style="color:var(--success);">Verified</div></div>
             </div>
-            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">Security Confirmation: All incoming patient data is end-to-end encrypted. Biometric voice files are automatically deleted after text summary generation. Only clinical summaries are stored on secure servers. Last security audit: March 20, 2026.</div>
+            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">Security Confirmation: All incoming user data is end-to-end encrypted. Biometric voice files are automatically deleted after text summary generation. Only clinical summaries are stored on secure servers. Last security audit: March 20, 2026.</div>
           </div>
         </div>
       </div>
@@ -838,7 +1026,7 @@
             <div class="shredder-particles" id="shredder-particles"></div>
           </div>
           <div class="shredder-status" id="shredder-status">All raw audio & sensitive data has been securely purged</div>
-          <button class="btn btn-outline" id="btn-shred-demo" style="margin-top:16px;">▶ Run Shred Demonstration</button>
+          <button class="btn btn-outline" id="btn-shred-demo" style="margin-top:16px;">▶ Run Secure Shred</button>
         </div>
       </div>
       <div class="glass-card mb-24">
@@ -863,7 +1051,7 @@
     <!-- ═══ TRIAGE LIST ═══ -->
     <div class="screen" id="screen-triage">
       <div class="section-heading">
-        <div><div class="section-title">🚦 Patient Triage List</div><div class="section-subtitle">Real-time risk stratification · Color-coded priority</div></div>
+        <div><div class="section-title">🚦 User Triage List</div><div class="section-subtitle">Real-time risk stratification · Color-coded priority</div></div>
         <div class="triage-filters" id="triage-filters">
           <button class="chip active" data-filter="all">All</button>
           <button class="chip" data-filter="severe" style="border-color:var(--danger);color:var(--danger);">🔴 Severe</button>
@@ -903,20 +1091,74 @@
         <div id="compliance-audit"></div>
       </div>
     </div>
-
+    </div>
   </main>
+</div>
+
+<div class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <button class="nav-item bottom-nav-item" type="button" data-screen="dashboard" aria-label="Home">
+    <span class="nav-icon"><span class="material-symbols-rounded">space_dashboard</span></span><span class="nav-label">Home</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="copilot" aria-label="Talk to AI">
+    <span class="nav-icon"><span class="material-symbols-rounded">chat_bubble</span></span><span class="nav-label">AI</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="checkin" aria-label="Daily Check-In">
+    <span class="nav-icon"><span class="material-symbols-rounded">event_note</span></span><span class="nav-label">Check</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="support" aria-label="Early Support">
+    <span class="nav-icon"><span class="material-symbols-rounded">favorite</span></span><span class="nav-label">Support</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="vault" aria-label="Learn and Grow">
+    <span class="nav-icon"><span class="material-symbols-rounded">auto_stories</span></span><span class="nav-label">Learn</span>
+  </button>
 </div>
 
 <div id="toast-container"></div>
 
+<!-- ═══ CHECK-IN CALL OVERLAY ═══ -->
+<div id="checkin-call-overlay" class="checkin-call-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Scheduled check-in call">
+  <div class="checkin-call-card">
+    <button class="checkin-call-close" id="btn-call-close" aria-label="Close call overlay">✕</button>
+    <div class="checkin-call-header">
+      <div class="status-dot"></div>
+      <div class="status-label">Daily Check-In</div>
+    </div>
+    <div class="checkin-call-title">Your wellness check-in is ready</div>
+    <div class="checkin-call-subtitle">You can skip without losing your streak.</div>
+
+    <div class="checkin-call-ring">
+      <div class="checkin-call-ring-outer"></div>
+      <div class="checkin-call-ring-inner">🌱</div>
+    </div>
+
+    <div class="checkin-call-actions">
+      <button class="btn btn-ghost call-skip" data-checkin-reason="Not in the mood">⏭ Skip</button>
+      <button class="btn btn-primary call-answer" id="btn-call-answer">✓ Check In</button>
+    </div>
+
+    <div class="checkin-call-reasons">
+      <div class="checkin-call-reasons-title">Quick reason (optional)</div>
+      <div class="checkin-call-reasons-row">
+        <button class="chip" data-checkin-reason="Not in the mood">Not in the mood</button>
+        <button class="chip" data-checkin-reason="Busy right now">Busy right now</button>
+        <button class="chip" data-checkin-reason="Feeling okay, skipping">Feeling okay, skipping</button>
+        <button class="chip" data-checkin-reason="Need more time">Need more time</button>
+      </div>
+      <div class="checkin-call-note">Streak stays safe. Reason is stored anonymously.</div>
+    </div>
+
+    <div class="checkin-call-status" id="checkin-call-status" aria-live="polite"></div>
+  </div>
+</div>
+
 <!-- ═══ BREATHING MODAL ═══ -->
-<div id="breathing-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-content">
+<div id="breathing-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
     <div class="modal-header">
-      <div class="card-title">🫁 Guided Breathing Exercise</div>
+      <div class="card-title">🫁 4-4-4 Guided Breathing</div>
       <button class="modal-close" onclick="closeBreathingModal()">✕</button>
     </div>
-    <div style="text-align:center;padding:20px;">
+    <div class="intervention-body" style="text-align:center;padding:20px;">
       <div class="breathing-guided-circle" id="breathing-guided">
         <span id="breathing-phase">Ready</span>
       </div>
@@ -930,7 +1172,72 @@
   </div>
 </div>
 
+<!-- ═══ GROUNDING MODAL ═══ -->
+<div id="grounding-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
+    <div class="modal-header">
+      <div class="card-title">🖐️ 5-4-3-2-1 Grounding</div>
+      <button class="modal-close" onclick="closeGroundingModal()">✕</button>
+    </div>
+    <div class="intervention-body">
+      <div class="intervention-step-chip" id="grounding-step-chip">Step 1 of 5</div>
+      <div class="intervention-prompt" id="grounding-prompt">Name 5 things you can see around you.</div>
+      <textarea id="grounding-input" class="intervention-input" rows="5" placeholder="Type what you notice..."></textarea>
+      <div class="intervention-progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="grounding-progress" style="width:20%"></div></div>
+      </div>
+      <div class="intervention-actions">
+        <button class="btn btn-primary" id="btn-grounding-start">▶ Start Grounding</button>
+        <button class="btn btn-primary" id="btn-grounding-next" style="display:none;">Next Step</button>
+        <button class="btn btn-ghost" id="btn-grounding-stop" onclick="closeGroundingModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CBT REFRAME MODAL ═══ -->
+<div id="cbt-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
+    <div class="modal-header">
+      <div class="card-title">🧠 CBT Thought Reframe</div>
+      <button class="modal-close" onclick="closeCbtModal()">✕</button>
+    </div>
+    <div class="intervention-body">
+      <div class="intervention-prompt">Use this structure to shift from automatic worry to a balanced response.</div>
+      <div class="grid-2 gap-24" style="width:100%;">
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Worry Thought</div>
+          <textarea id="cbt-worry" class="intervention-input" rows="4" placeholder="What thought is troubling you right now?"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Evidence For</div>
+          <textarea id="cbt-for" class="intervention-input" rows="4" placeholder="Facts that seem to support this thought"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Evidence Against</div>
+          <textarea id="cbt-against" class="intervention-input" rows="4" placeholder="Facts that challenge this thought"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Balanced Reframe</div>
+          <textarea id="cbt-balanced" class="intervention-input" rows="4" placeholder="A kinder, more realistic thought"></textarea>
+        </div>
+      </div>
+      <div id="cbt-result" class="plan-box" style="display:none;width:100%;">
+        <div class="plan-label">Your Reframed Thought</div>
+        <div class="plan-text" id="cbt-result-text"></div>
+      </div>
+      <div class="intervention-actions">
+        <button class="btn btn-primary" id="btn-cbt-submit">✅ Complete Reframe</button>
+        <button class="btn btn-ghost" onclick="closeCbtModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 <script src="features.js"></script>
+<script src="iam.js"></script>
+<script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+<script src="visuals.js"></script>
 </body>
 </html>
