@@ -154,8 +154,10 @@ function navigateToScreen(screen, opts = {}) {
     }
   }
 
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if (item) item.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const matches = n.dataset?.screen === screen;
+    n.classList.toggle('active', matches);
+  });
 
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.remove('active');
@@ -165,6 +167,8 @@ function navigateToScreen(screen, opts = {}) {
     screenEl.classList.add('active');
     screenEl.style.display = 'block';
   }
+  refreshRevealTargets();
+  if (screen === 'copilot') bindChatUi();
 
   if (screen === 'screening') {
     safeInitScreeningPage();
@@ -673,29 +677,57 @@ document.querySelectorAll('.chip[data-lang]').forEach(chip => {
 });
 
 // ── Chat ──
-const chatInput = document.getElementById('chat-input');
-const chatSend = document.getElementById('chat-send');
-const chatMessages = document.getElementById('chat-messages');
+let chatInput = document.getElementById('chat-input');
+let chatSend = document.getElementById('chat-send');
+let chatMessages = document.getElementById('chat-messages');
 
-chatSend.addEventListener('click', sendChat);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+function bindChatUi() {
+  chatInput = document.getElementById('chat-input');
+  chatSend = document.getElementById('chat-send');
+  chatMessages = document.getElementById('chat-messages');
+  if (chatSend && chatInput && chatMessages) {
+    chatSend.onclick = sendChat;
+    chatInput.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    };
+  } else {
+    console.warn('Chat UI not initialized: missing chat elements.');
+  }
+}
+bindChatUi();
+document.addEventListener('DOMContentLoaded', bindChatUi);
 
 async function sendChat() {
-  const msg = chatInput.value.trim();
+  // Look up fresh to avoid null reference issues
+  const input = document.getElementById('chat-input');
+  const messages = document.getElementById('chat-messages');
+  if (!input || !messages) {
+    console.warn('Chat elements not found');
+    return;
+  }
+  
+  const msg = input.value.trim();
   if (!msg) return;
-  appendBubble(msg, 'user');
-  chatInput.value = '';
+  appendBubble(msg, 'user', messages);
+  input.value = '';
 
   // Show typing indicator
   const typingId = 'typing-' + Date.now();
-  chatMessages.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="chat-bubble bot"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  messages.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="chat-bubble bot"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`);
+  messages.scrollTop = messages.scrollHeight;
 
   let reply;
+  let timeout;
   try {
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`${API}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         message: msg,
         mood: +document.getElementById('sl-mood').value,
@@ -710,29 +742,40 @@ async function sendChat() {
         journalEmotion: 'neutral'
       })
     });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`chat API ${res.status}`);
     const raw = await res.json();
     const data = unwrapApi(raw);
     reply = data.reply;
-  } catch {
-    reply = `I hear you. Your current stress is ${document.getElementById('sl-stress').value}/10. Try a 4-4-4 breathing cycle right now, then note one thing you can control in the next hour.`;
+  } catch (err) {
+    reply = `I hear you. Your current stress is ${document.getElementById('sl-stress').value}/10. Try a 4-4-4 breathing cycle now, then note one thing you can control in the next hour. (${err?.message || 'offline'})`;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 
   const typingEl = document.getElementById(typingId);
   if (typingEl) typingEl.remove();
-  appendBubble(reply, 'bot');
+  if (!reply) reply = 'I am here and listening. Share one detail about what you need right now.';
+  appendBubble(reply, 'bot', messages);
 }
 
-function appendBubble(text, role) {
+function appendBubble(text, role, container) {
+  // Use provided container or look up fresh
+  if (!container) container = document.getElementById('chat-messages');
+  if (!container) return;
+  
   const time = new Date().toLocaleTimeString();
   const label = role === 'bot' ? 'Copilot' : 'You';
-  chatMessages.insertAdjacentHTML('beforeend',
+  container.insertAdjacentHTML('beforeend',
     `<div class="chat-bubble ${role}">${escapeHtml(text)}<div class="chat-bubble-meta">${label} · ${time}</div></div>`
   );
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  container.scrollTop = container.scrollHeight;
 }
 
 // ── Check-In ──
 document.getElementById('btn-checkin').addEventListener('click', runCheckin);
+const journalAiBtn = document.getElementById('btn-journal-ai');
+if (journalAiBtn) journalAiBtn.addEventListener('click', runJournalAiSuggest);
 
 async function runCheckin() {
   const btn = document.getElementById('btn-checkin');
@@ -796,6 +839,48 @@ async function runCheckin() {
   btn.disabled = false;
 }
 
+async function runJournalAiSuggest() {
+  const btn = document.getElementById('btn-journal-ai');
+  const text = document.getElementById('journal-text')?.value?.trim();
+  const box = document.getElementById('journal-ai-box');
+  const out = document.getElementById('journal-ai-suggestion');
+  if (!text) { showToast('Write something in your journal first'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Thinking...'; }
+  if (box && out) { box.style.display = 'block'; out.textContent = 'Analyzing your note for patterns...'; }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        message: `You are a compassionate mental health copilot. Read this journal entry and reply with 2 concise suggestions (max 40 words total) and one grounding or CBT micro-action:\n\n${text}`,
+        mood: +document.getElementById('sl-mood').value,
+        anxiety: +document.getElementById('sl-anxiety').value,
+        stress: +document.getElementById('sl-stress').value,
+        sleepHours: +document.getElementById('sl-sleep').value,
+        personality: state.personality,
+        language: state.language,
+        memoryContext: state.memory.slice(0, 5)
+      })
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`AI suggest error ${res.status}`);
+    const raw = await res.json();
+    const data = unwrapApi(raw);
+    const reply = data.reply || data;
+    if (out) out.textContent = reply;
+    if (box) box.style.display = 'block';
+    showToast('🧠 Suggestions ready');
+  } catch (e) {
+    if (out) out.textContent = 'Offline. Try a 4-7-8 breath and write one thing you can control today.';
+    if (box) box.style.display = 'block';
+    showToast('⚠️ Could not fetch AI suggestions');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🧠 AI Suggest'; }
+}
+
 function renderCheckinResult(data) {
   const el = document.getElementById('checkin-result');
   const body = document.getElementById('checkin-result-body');
@@ -832,6 +917,7 @@ function renderCheckinResult(data) {
 
 // ── Emergency ──
 async function triggerEmergencySOS() {
+  animateSosButtons();
   try {
     const authHeaders = typeof window.__aegisGetAuthHeaders === 'function' ? window.__aegisGetAuthHeaders() : null;
     const hasAuth = authHeaders && authHeaders.Authorization;
@@ -869,6 +955,20 @@ if (emergencyBtn) emergencyBtn.addEventListener('click', triggerEmergencySOS);
 
 const emergencyHomeBtn = document.getElementById('btn-emergency-home');
 if (emergencyHomeBtn) emergencyHomeBtn.addEventListener('click', triggerEmergencySOS);
+
+function animateSosButtons() {
+  [emergencyBtn, emergencyHomeBtn].forEach(btn => {
+    if (!btn) return;
+    btn.classList.add('sos-armed');
+    btn.disabled = true;
+    btn.textContent = '🚨 Sending...';
+    setTimeout(() => {
+      btn.classList.remove('sos-armed');
+      btn.disabled = false;
+      btn.textContent = btn.id === 'btn-emergency-home' ? '🚨 Emergency SOS' : '🚨 Trigger Emergency Escalation';
+    }, 2800);
+  });
+}
 
 // ── SMS Fallback ──
 document.getElementById('btn-sms-fallback').addEventListener('click', async () => {
@@ -1411,12 +1511,79 @@ function setTextAndColor(id, val, col) { const el = document.getElementById(id);
 function setBarWidth(id, pct) { const el = document.getElementById(id); if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-        if (e.key === 'Escape') {
-          closeCheckinCallOverlay();
-          closeBreathingModal();
-          closeGroundingModal();
-          closeCbtModal();
-        }
+let revealObserver = null;
+
+function initTopbarTelemetry() {
+  const dateEl = document.getElementById('topbar-date');
+  const deviceEl = document.getElementById('topbar-device');
+  if (!dateEl && !deviceEl) return;
+
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  const update = () => {
+    if (dateEl) dateEl.textContent = fmt.format(new Date());
+    if (deviceEl) {
+      const width = window.innerWidth;
+      const label = width < 768 ? 'Mobile' : width < 1100 ? 'Tablet' : 'Desktop';
+      deviceEl.textContent = `${label} • ${width}px`;
+    }
+  };
+
+  update();
+  setInterval(update, 60000);
+
+  let frame = 0;
+  window.addEventListener('resize', () => {
+    if (frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(update);
+  });
+}
+
+function refreshRevealTargets() {
+  const targets = [
+    ...document.querySelectorAll('.topbar'),
+    ...document.querySelectorAll('.screen.active .hero-banner'),
+    ...document.querySelectorAll('.screen.active .section-heading'),
+    ...document.querySelectorAll('.screen.active .glass-card'),
+    ...document.querySelectorAll('.screen.active .intervention-card'),
+  ];
+  if (!targets.length) return;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion || typeof IntersectionObserver === 'undefined') {
+    targets.forEach(node => {
+      node.classList.remove('reveal-ready');
+      node.classList.add('is-visible');
+    });
+    return;
+  }
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, {
+      threshold: 0.14,
+      rootMargin: '0px 0px -8% 0px',
+    });
+  }
+
+  targets.forEach((node, idx) => {
+    if (node.dataset.revealBound === 'true') return;
+    node.dataset.revealBound = 'true';
+    node.classList.add('reveal-ready');
+    node.style.transitionDelay = `${Math.min(idx * 35, 220)}ms`;
+    revealObserver.observe(node);
+  });
+}
+
 // ── Init ──
 initUxModeControls();
 updateDashboard();
@@ -1426,6 +1593,8 @@ initCareerSupportFeatures();
 initClinicianDashboard();
 initCheckinCallUi();
 renderGamification();
+initTopbarTelemetry();
+refreshRevealTargets();
 
 // Auto-update greeting based on time
 const hour = new Date().getHours();
@@ -1601,6 +1770,22 @@ const LIKERT_OPTIONS = ['Not at all', 'Several days', 'More than half', 'Nearly 
 function renderScreeningQuestions(containerId, questions, prefix) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  
+  // If container already has static HTML questions, just bind event listeners
+  const existingQuestions = container.querySelectorAll('.screening-question');
+  if (existingQuestions.length > 0) {
+    // Questions already exist as static HTML, just bind events
+    container.querySelectorAll('.q-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const qId = opt.dataset.q;
+        container.querySelectorAll(`.q-option[data-q="${qId}"]`).forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+      });
+    });
+    return;
+  }
+  
+  // Fallback: render questions dynamically if not found in HTML
   container.innerHTML = questions.map((q, i) => `
     <div class="screening-question">
       <div class="q-text"><span class="q-number">${i + 1}</span>${q}</div>

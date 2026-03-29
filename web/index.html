@@ -7,7 +7,8 @@
   <title>Mental Compass · AI Mental Health Copilot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0..1" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="logo.png" />
 </head>
@@ -16,6 +17,7 @@
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <div class="ambient-bg"></div>
+<canvas id="bg-3d-canvas" class="bg-3d-canvas" aria-hidden="true"></canvas>
 
 <button id="global-logout" class="global-logout" aria-label="Log out" title="Log out" style="display:none;">⏻</button>
 
@@ -42,61 +44,61 @@
     <nav class="sidebar-nav">
       <div class="nav-section-label">Wellness</div>
       <a class="nav-item active" data-screen="dashboard" href="#">
-        <span class="nav-icon">◎</span><span class="nav-label">Home</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">space_dashboard</span></span><span class="nav-label">Home</span>
       </a>
       <a class="nav-item" data-screen="copilot" href="#">
-        <span class="nav-icon">◉</span><span class="nav-label">Talk to AI</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">chat_bubble</span></span><span class="nav-label">Talk to AI</span>
       </a>
       <a class="nav-item" data-screen="checkin" href="#">
-        <span class="nav-icon">◌</span><span class="nav-label">Daily Check-In</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">event_note</span></span><span class="nav-label">Daily Check-In</span>
       </a>
       <a class="nav-item" data-screen="support" href="#">
-        <span class="nav-icon">🤝</span><span class="nav-label">Early Support</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">favorite</span></span><span class="nav-label">Early Support</span>
       </a>
       <a class="nav-item" data-screen="community" href="#">
-        <span class="nav-icon">💬</span><span class="nav-label">Community</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">groups</span></span><span class="nav-label">Community</span>
       </a>
       <a class="nav-item" data-screen="vault" href="#">
-        <span class="nav-icon">📚</span><span class="nav-label">Learn & Grow</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">auto_stories</span></span><span class="nav-label">Learn & Grow</span>
       </a>
       <a class="nav-item" data-screen="milestones" href="#">
-        <span class="nav-icon">🏆</span><span class="nav-label">My Journey</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">timeline</span></span><span class="nav-label">My Journey</span>
       </a>
 
       <div class="nav-section-label full-only">Advanced</div>
       <a class="nav-item full-only" data-screen="voice" href="#">
-        <span class="nav-icon">🎤</span><span class="nav-label">Voice Lab</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">mic</span></span><span class="nav-label">Voice Lab</span>
       </a>
       <a class="nav-item full-only" data-screen="signals" href="#">
-        <span class="nav-icon">📡</span><span class="nav-label">Signals</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">podcasts</span></span><span class="nav-label">Signals</span>
       </a>
       <a class="nav-item full-only" data-screen="screening" href="#">
-        <span class="nav-icon">📝</span><span class="nav-label">Screening</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">fact_check</span></span><span class="nav-label">Screening</span>
       </a>
       <a class="nav-item full-only" data-screen="insights" href="#">
-        <span class="nav-icon">🔮</span><span class="nav-label">Insights</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">insights</span></span><span class="nav-label">Insights</span>
       </a>
 
       <div class="nav-section-label full-only">Provider</div>
       <a class="nav-item" data-screen="clinician" href="#">
-        <span class="nav-icon">🏥</span><span class="nav-label">Clinician</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">medical_services</span></span><span class="nav-label">Clinician</span>
       </a>
       <a class="nav-item full-only" data-screen="triage" href="#">
-        <span class="nav-icon">🚦</span><span class="nav-label">Triage List</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">rule</span></span><span class="nav-label">Triage List</span>
       </a>
       <a class="nav-item full-only" data-screen="alerts" href="#">
-        <span class="nav-icon">🚨</span><span class="nav-label">Alerts</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">notification_important</span></span><span class="nav-label">Alerts</span>
       </a>
       <a class="nav-item full-only" data-screen="compliance" href="#">
-        <span class="nav-icon">✅</span><span class="nav-label">Compliance</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">verified_user</span></span><span class="nav-label">Compliance</span>
       </a>
 
       <div class="nav-section-label full-only">System</div>
       <a class="nav-item full-only" data-screen="privacy" href="#">
-        <span class="nav-icon">🔒</span><span class="nav-label">Privacy & Security</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">lock</span></span><span class="nav-label">Privacy & Security</span>
       </a>
       <a class="nav-item full-only" data-screen="wipelog" href="#">
-        <span class="nav-icon">🗑️</span><span class="nav-label">Wipe Log</span>
+        <span class="nav-icon"><span class="material-symbols-rounded">delete</span></span><span class="nav-label">Wipe Log</span>
       </a>
     </nav>
 
@@ -105,6 +107,28 @@
 
   <!-- ═══ Main Content ═══ -->
   <main class="main-content" id="main-content" role="main">
+    <div class="content-frame">
+      <header class="topbar" aria-label="Global quick actions">
+        <div class="topbar-heading">
+          <div class="topbar-eyebrow">Calm, clear, secure</div>
+          <div class="topbar-title">Your daily mental health space</div>
+          <div class="topbar-meta">
+            <span class="topbar-meta-pill" id="topbar-date"></span>
+            <span class="topbar-meta-pill" id="topbar-device"></span>
+          </div>
+          <div class="topbar-tags">
+            <span class="topbar-chip"><span class="material-symbols-rounded">shield_lock</span>Private by default</span>
+            <span class="topbar-chip success"><span class="material-symbols-rounded">radio_button_checked</span>Edge live</span>
+            <span class="topbar-chip neutral"><span class="material-symbols-rounded">monitor_heart</span>On-device biomarker scan</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost topbar-btn" type="button" onclick="navigateToScreen('checkin')"><span class="material-symbols-rounded">event_note</span>Check-In</button>
+          <button class="btn btn-outline topbar-btn" type="button" onclick="navigateToScreen('copilot')"><span class="material-symbols-rounded">chat</span>Talk to AI</button>
+          <button class="btn btn-primary topbar-btn" type="button" onclick="navigateToScreen('support')"><span class="material-symbols-rounded">favorite</span>Early Support</button>
+          <button class="btn btn-danger topbar-btn" type="button" onclick="document.getElementById('btn-emergency-home')?.click()"><span class="material-symbols-rounded">emergency</span>SOS</button>
+        </div>
+      </header>
 
     <!-- ═══ DASHBOARD ═══ -->
     <div class="screen active" id="screen-dashboard">
@@ -265,7 +289,7 @@
           </div>
           <div class="chat-input-row">
             <textarea class="chat-input" id="chat-input" rows="1" placeholder="Tell Copilot how you feel..." aria-label="Chat message input"></textarea>
-            <button class="chat-send-btn" id="chat-send" title="Send" aria-label="Send message">▶</button>
+            <button class="chat-send-btn" type="button" id="chat-send" onclick="sendChat()" title="Send" aria-label="Send message">▶</button>
           </div>
         </div>
       </div>
@@ -345,8 +369,13 @@
         <div class="card-title">📝 AI-Assisted Journaling</div>
         <div class="card-subtitle">Write freely · emotional markers auto-detected</div>
         <textarea class="text-area" id="journal-text" placeholder="Write about how you're feeling today. The AI will detect emotional patterns and suggest CBT actions..."></textarea>
-        <div style="margin-top:16px;display:flex;gap:12px;align-items:center;">
-          <button class="btn btn-primary btn-full" id="btn-checkin">🔬 Run Predictive Analysis</button>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="btn-journal-ai" onclick="runJournalAiSuggest()">🧠 AI Suggest</button>
+          <button class="btn btn-primary" id="btn-checkin" onclick="runCheckin()">🔬 Run Predictive Analysis</button>
+        </div>
+        <div class="plan-box" id="journal-ai-box" style="display:none;margin-top:12px;">
+          <div class="plan-label">AI Suggestions</div>
+          <div class="plan-text" id="journal-ai-suggestion">AI is thinking...</div>
         </div>
       </div>
       <div class="glass-card" id="checkin-result" style="display:none;">
@@ -559,7 +588,89 @@
       <div class="glass-card mb-24">
         <div class="card-title">PHQ-9 · Depression Questionnaire</div>
         <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
-        <div id="phq9-questions"></div>
+        <div id="phq9-questions">
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">1</span>Little interest or pleasure in doing things</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-0" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-0" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-0" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-0" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">2</span>Feeling down, depressed, or hopeless</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-1" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-1" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-1" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-1" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">3</span>Trouble falling or staying asleep, or sleeping too much</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-2" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-2" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-2" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-2" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">4</span>Feeling tired or having little energy</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-3" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-3" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-3" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-3" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">5</span>Poor appetite or overeating</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-4" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-4" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-4" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-4" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">6</span>Feeling bad about yourself — or that you are a failure</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-5" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-5" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-5" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-5" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">7</span>Trouble concentrating on things, such as reading or watching TV</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-6" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-6" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-6" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-6" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">8</span>Moving or speaking slowly, or being fidgety/restless</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-7" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-7" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-7" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-7" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">9</span>Thoughts that you would be better off dead, or of hurting yourself</div>
+            <div class="q-options">
+              <span class="q-option" data-q="phq9-8" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="phq9-8" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="phq9-8" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="phq9-8" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
           <button class="btn btn-primary" id="btn-score-phq9">Calculate PHQ-9 Score</button>
           <div id="phq9-result" style="font-size:18px;font-weight:700;"></div>
@@ -568,7 +679,71 @@
       <div class="glass-card mb-24">
         <div class="card-title">GAD-7 · Generalized Anxiety Disorder Scale</div>
         <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
-        <div id="gad7-questions"></div>
+        <div id="gad7-questions">
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">1</span>Feeling nervous, anxious, or on edge</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-0" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-0" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-0" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-0" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">2</span>Not being able to stop or control worrying</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-1" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-1" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-1" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-1" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">3</span>Worrying too much about different things</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-2" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-2" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-2" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-2" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">4</span>Trouble relaxing</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-3" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-3" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-3" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-3" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">5</span>Being so restless that it's hard to sit still</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-4" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-4" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-4" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-4" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">6</span>Becoming easily annoyed or irritable</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-5" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-5" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-5" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-5" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+          <div class="screening-question">
+            <div class="q-text"><span class="q-number">7</span>Feeling afraid, as if something awful might happen</div>
+            <div class="q-options">
+              <span class="q-option" data-q="gad7-6" data-val="0">Not at all (0)</span>
+              <span class="q-option" data-q="gad7-6" data-val="1">Several days (1)</span>
+              <span class="q-option" data-q="gad7-6" data-val="2">More than half (2)</span>
+              <span class="q-option" data-q="gad7-6" data-val="3">Nearly every day (3)</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
           <button class="btn btn-primary" id="btn-score-gad7">Calculate GAD-7 Score</button>
           <div id="gad7-result" style="font-size:18px;font-weight:700;"></div>
@@ -916,8 +1091,26 @@
         <div id="compliance-audit"></div>
       </div>
     </div>
-
+    </div>
   </main>
+</div>
+
+<div class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <button class="nav-item bottom-nav-item" type="button" data-screen="dashboard" aria-label="Home">
+    <span class="nav-icon"><span class="material-symbols-rounded">space_dashboard</span></span><span class="nav-label">Home</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="copilot" aria-label="Talk to AI">
+    <span class="nav-icon"><span class="material-symbols-rounded">chat_bubble</span></span><span class="nav-label">AI</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="checkin" aria-label="Daily Check-In">
+    <span class="nav-icon"><span class="material-symbols-rounded">event_note</span></span><span class="nav-label">Check</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="support" aria-label="Early Support">
+    <span class="nav-icon"><span class="material-symbols-rounded">favorite</span></span><span class="nav-label">Support</span>
+  </button>
+  <button class="nav-item bottom-nav-item" type="button" data-screen="vault" aria-label="Learn and Grow">
+    <span class="nav-icon"><span class="material-symbols-rounded">auto_stories</span></span><span class="nav-label">Learn</span>
+  </button>
 </div>
 
 <div id="toast-container"></div>
@@ -1044,5 +1237,7 @@
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="iam.js"></script>
+<script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+<script src="visuals.js"></script>
 </body>
 </html>

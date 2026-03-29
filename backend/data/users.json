@@ -224,5 +224,33 @@
     "wearableConnected": false,
     "wearableEncryptedData": null,
     "doctorCode": "DR-EZZ4"
+  },
+  {
+    "id": "b120f978-6a11-46e6-b09c-9a511824a082",
+    "anonymousId": "JRN-9K7D",
+    "email": "samir@gmail.com",
+    "password": "$2b$10$dOyzxGyfWwF0OvbziKhc..IJxFzifLfa4ayG0rzj2alFIVWRKSn62",
+    "fullName": "Samir Wagle",
+    "role": "patient",
+    "isActive": true,
+    "createdAt": "2026-03-29T10:15:19.888Z",
+    "createdBy": "352e2530-0a03-4e9e-8186-5715a1213e32",
+    "linkedPatientId": null,
+    "doctorType": null,
+    "phone": "",
+    "avatar": "🧑",
+    "consentGiven": true,
+    "consentAt": "2026-03-29T10:15:19.888Z",
+    "subscription": null,
+    "subscriptionStatus": null,
+    "paymentVerified": false,
+    "checkinSchedule": {
+      "hour": 20,
+      "minute": 0,
+      "timezone": "Asia/Kathmandu"
+    },
+    "wearableConnected": false,
+    "wearableEncryptedData": null,
+    "doctorCode": null
   }
 ]
