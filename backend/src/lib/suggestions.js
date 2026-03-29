@@ -48,7 +48,7 @@ const SUGGESTION_POOL = {
 
 /**
  * Analyze journal text and return a simple sentiment object.
- * This is a basic keyword-based approach; in production, use Gemini/NLP.
+ * This is a basic keyword-based approach; in production, use Azure OpenAI/NLP.
  */
 export function analyzeJournalContent(content) {
   const text = (content || '').toLowerCase();

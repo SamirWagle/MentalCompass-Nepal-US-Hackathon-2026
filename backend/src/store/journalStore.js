@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORE_PATH = path.resolve(__dirname, '../../data/journals.json');
+const TXT_LOG_PATH = path.resolve(__dirname, '../../data/journal_entries.txt');
 
 function readStore() {
   try {
@@ -23,14 +24,35 @@ function writeStore(data) {
   fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+function appendTxtLog(record) {
+  const line = `${JSON.stringify(record)}\n`;
+  fs.appendFileSync(TXT_LOG_PATH, line, 'utf-8');
+}
+
 // Journal entry types
-export const ENTRY_TYPES = ['text', 'voice', 'wearable', 'call'];
+export const ENTRY_TYPES = ['text', 'voice', 'wearable', 'call', 'video'];
 
 /**
  * Create a new journal entry.
  * Stored with anonymousId — never the user's real name.
  */
-export function createJournalEntry({ userId, anonymousId, type, content, audioUrl, voiceMetrics, wearableData, wearablePhi, sentiment }) {
+export function createJournalEntry({
+  userId,
+  anonymousId,
+  type,
+  content,
+  audioUrl,
+  audioMeta,
+  videoMeta,
+  voiceMetrics,
+  wearableData,
+  wearablePhi,
+  sentiment,
+  llmAnalysis,
+  aiSummary,
+  checklist,
+  mcqAnswers,
+}) {
   const entries = readStore();
 
   const entry = {
@@ -41,10 +63,16 @@ export function createJournalEntry({ userId, anonymousId, type, content, audioUr
     type: ENTRY_TYPES.includes(type) ? type : 'text',
     content: content || '',
     audioUrl: audioUrl || null,            // voice journal: path/URL to audio file
+    audioMeta: audioMeta || null,          // audio journal metadata
+    videoMeta: videoMeta || null,          // video journal metadata
     voiceMetrics: voiceMetrics || null,    // { jitter, pitch, energy, speechRate }
     wearableData: wearableData || null,    // raw wearable data (non-PHI summary)
     wearablePhi: wearablePhi || null,      // AES-encrypted PHI biometric payload
     sentiment: sentiment || null,          // AI-computed after creation
+    llmAnalysis: llmAnalysis || null,      // LLM analysis payload (Azure OpenAI)
+    aiSummary: aiSummary || null,          // short doctor-facing AI summary
+    checklist: Array.isArray(checklist) ? checklist : [],
+    mcqAnswers: mcqAnswers && typeof mcqAnswers === 'object' ? mcqAnswers : {},
     aiSuggestions: [],                     // populated by AI engine
     doctorAssessments: [],                 // populated by doctor reviews
     createdAt: new Date().toISOString(),
@@ -54,6 +82,19 @@ export function createJournalEntry({ userId, anonymousId, type, content, audioUr
 
   entries.push(entry);
   writeStore(entries);
+  appendTxtLog({
+    event: 'journal_created',
+    timestamp: entry.createdAt,
+    journalId: entry.journalId,
+    entryId: entry.id,
+    anonymousId: entry.anonymousId,
+    type: entry.type,
+    content: entry.content,
+    audioMeta: entry.audioMeta,
+    checklist: entry.checklist,
+    mcqAnswers: entry.mcqAnswers,
+    aiSummary: entry.aiSummary,
+  });
   return entry;
 }
 
@@ -148,12 +189,23 @@ export function addDoctorAssessment(entryId, assessment) {
   const entries = readStore();
   const idx = entries.findIndex(e => e.id === entryId);
   if (idx === -1) return null;
-  entries[idx].doctorAssessments.push({
+  const assessmentRecord = {
     id: uuidv4(),
     ...assessment,
     createdAt: new Date().toISOString(),
-  });
+  };
+  entries[idx].doctorAssessments.push(assessmentRecord);
   writeStore(entries);
+  appendTxtLog({
+    event: 'doctor_feedback',
+    timestamp: assessmentRecord.createdAt,
+    entryId,
+    anonymousId: entries[idx].anonymousId,
+    doctorId: assessmentRecord.doctorId,
+    severity: assessmentRecord.severity || 'moderate',
+    feedbackToPatient: assessmentRecord.feedbackToPatient || '',
+    requiresImmediateCall: !!assessmentRecord.requiresImmediateCall,
+  });
   return sanitizeForDoctor(entries[idx]);
 }
 

@@ -17,6 +17,8 @@
 
 <div class="ambient-bg"></div>
 
+<button id="global-logout" class="global-logout" aria-label="Log out" title="Log out" style="display:none;">⏻</button>
+
 <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open navigation menu">☰</button>
 
 <div class="app-shell">
@@ -143,6 +145,32 @@
             <div class="stat-value" id="dash-risk-label" style="color:var(--success)">LOW</div>
             <div class="stat-change flat" id="dash-risk-score">—</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Gamified HUD -->
+      <div class="grid-3 gap-24 mb-24" id="gamified-hud">
+        <div class="glass-card">
+          <div class="card-title">XP Progress</div>
+          <div class="card-subtitle">Level up through check-ins & exercises</div>
+          <div class="xp-meter">
+            <div class="xp-level" id="xp-level">Level 3 · Sprout</div>
+            <div class="progress-bar">
+              <div class="progress-fill accent" id="xp-bar" style="width:18%"></div>
+            </div>
+            <div class="xp-points" id="xp-points">18 / 100 XP</div>
+            <div class="xp-note">Complete quests to earn bonus XP.</div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Daily & Weekly Quests</div>
+          <div class="card-subtitle">Finish tasks to unlock badges</div>
+          <div id="quest-list"></div>
+        </div>
+        <div class="glass-card">
+          <div class="card-title">Leaderboard</div>
+          <div class="card-subtitle">Friendly competition · demo data</div>
+          <div id="leaderboard-list"></div>
         </div>
       </div>
 
@@ -280,6 +308,17 @@
     <div class="screen" id="screen-checkin">
       <div class="section-heading">
         <div><div class="section-title">Daily Check-In</div><div class="section-subtitle">Active + passive biometric inputs for AI triage</div></div>
+      </div>
+      <div class="glass-card mb-24 checkin-call-banner" aria-label="Scheduled check-in call">
+        <div>
+          <div class="card-title">Scheduled Check-In Call</div>
+          <div class="card-subtitle">Your streak is safe — you can always decline</div>
+          <div class="checkin-call-note">We respect your consent. Skipping a check-in keeps your streak intact and logs an anonymous reason.</div>
+        </div>
+        <div class="checkin-call-actions">
+          <button class="btn btn-outline" id="btn-open-checkin-call">▶ Start Call Demo</button>
+          <button class="btn btn-ghost" id="btn-decline-checkin-quick">⏭ Skip Today</button>
+        </div>
       </div>
       <div class="grid-2 gap-24 mb-24">
         <div class="glass-card">
@@ -915,6 +954,42 @@
 </div>
 
 <div id="toast-container"></div>
+
+<!-- ═══ CHECK-IN CALL OVERLAY ═══ -->
+<div id="checkin-call-overlay" class="checkin-call-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Scheduled check-in call">
+  <div class="checkin-call-card">
+    <button class="checkin-call-close" id="btn-call-close" aria-label="Close call overlay">✕</button>
+    <div class="checkin-call-header">
+      <div class="status-dot"></div>
+      <div class="status-label">Daily Check-In</div>
+    </div>
+    <div class="checkin-call-title">Your wellness check-in is ready</div>
+    <div class="checkin-call-subtitle">You can skip without losing your streak.</div>
+
+    <div class="checkin-call-ring">
+      <div class="checkin-call-ring-outer"></div>
+      <div class="checkin-call-ring-inner">🌱</div>
+    </div>
+
+    <div class="checkin-call-actions">
+      <button class="btn btn-ghost call-skip" data-checkin-reason="Not in the mood">⏭ Skip</button>
+      <button class="btn btn-primary call-answer" id="btn-call-answer">✓ Check In</button>
+    </div>
+
+    <div class="checkin-call-reasons">
+      <div class="checkin-call-reasons-title">Quick reason (optional)</div>
+      <div class="checkin-call-reasons-row">
+        <button class="chip" data-checkin-reason="Not in the mood">Not in the mood</button>
+        <button class="chip" data-checkin-reason="Busy right now">Busy right now</button>
+        <button class="chip" data-checkin-reason="Feeling okay, skipping">Feeling okay, skipping</button>
+        <button class="chip" data-checkin-reason="Need more time">Need more time</button>
+      </div>
+      <div class="checkin-call-note">Streak stays safe. Reason is stored anonymously.</div>
+    </div>
+
+    <div class="checkin-call-status" id="checkin-call-status" aria-live="polite"></div>
+  </div>
+</div>
 
 <!-- ═══ BREATHING MODAL ═══ -->
 <div id="breathing-modal" class="modal-overlay" style="display:none;">

@@ -8,13 +8,43 @@
  * - Output is ALWAYS framed as "things that might help" not "treatment"
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/+$/, '');
+const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY || '';
+const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || '';
+const AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-10-21';
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
+function hasAzureOpenAI() {
+  return Boolean(AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_API_KEY && AZURE_OPENAI_DEPLOYMENT);
+}
 
-const MODEL_ID = 'gemini-2.0-flash';
+async function callAzureChat({ systemPrompt, userPrompt, temperature = 0.3, maxTokens = 900 }) {
+  const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${encodeURIComponent(AZURE_OPENAI_API_VERSION)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': AZURE_OPENAI_API_KEY,
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Azure OpenAI error ${res.status}: ${msg.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  const content = String(data?.choices?.[0]?.message?.content || '').trim();
+  return JSON.parse(content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim());
+}
 
 /**
  * Analyze 30 days of journal entries + wearable data for a patient.
@@ -50,11 +80,9 @@ export async function analyzePatientJourney(entries, stats) {
       `declining: ${stats.declining}`
     : 'No trend data available.';
 
-  if (!genAI) {
+  if (!hasAzureOpenAI()) {
     return buildFallbackAnalysis(stats);
   }
-
-  const model = genAI.getGenerativeModel({ model: MODEL_ID });
 
   const prompt = `You are AegisSpeak's wellness companion AI. You are analyzing an ANONYMOUS patient's journal pattern to suggest supportive lifestyle habits.
 
@@ -84,14 +112,16 @@ Output a JSON object with EXACTLY these keys:
 Respond with ONLY the JSON object. No markdown, no code fences. Maximum 5 suggestions.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
-    const parsed = JSON.parse(cleaned);
+    const parsed = await callAzureChat({
+      systemPrompt: 'You are a safe wellness recommendation assistant. Never diagnose.',
+      userPrompt: prompt,
+      temperature: 0.3,
+      maxTokens: 900,
+    });
     return {
       ...parsed,
       generatedAt: new Date().toISOString(),
-      source: 'gemini',
+      source: 'azure-openai',
     };
   } catch (err) {
     console.error('AI analysis error:', err.message);
@@ -100,7 +130,7 @@ Respond with ONLY the JSON object. No markdown, no code fences. Maximum 5 sugges
 }
 
 /**
- * Fallback when Gemini is unavailable — uses rule-based suggestions.
+ * Fallback when Azure OpenAI is unavailable — uses rule-based suggestions.
  * Same safe-mode rules apply.
  */
 function buildFallbackAnalysis(stats) {

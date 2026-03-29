@@ -1,0 +1,1 @@
+{"event":"journal_created","timestamp":"2026-03-29T07:23:21.627Z","journalId":"JE-MNBFN1Y3-00NU","entryId":"c20b1b6e-6a13-4cfc-9ad0-13460611903f","anonymousId":"JRN-TCV5","type":"text","content":"terror lagiraxa yaar","checklist":["poor_sleep"],"mcqAnswers":{"mood":"very_good","energy":"medium"},"aiSummary":"Emotion trend: neutral"}

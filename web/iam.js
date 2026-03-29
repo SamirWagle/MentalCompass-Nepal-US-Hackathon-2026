@@ -66,6 +66,10 @@ function showLoginScreen() {
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.style.display = 'none';
   if (mainContent) mainContent.style.marginLeft = '0';
+  const glogout = document.getElementById('global-logout');
+  if (glogout) glogout.style.display = 'none';
+  const loginCta = document.getElementById('sidebar-login-cta');
+  if (loginCta) loginCta.style.display = 'none';
 
   // Hide all existing screens
   document.querySelectorAll('.screen').forEach(s => {
@@ -103,7 +107,6 @@ function buildLoginHTML() {
       </div>
       <div class="login-hero-content">
         <h1 class="login-hero-title">Predictive, Personalized,<br/>Privacy-First Care</h1>
-        <p class="login-hero-desc">Secure mental health support for patients, doctors, guardians, and administrators. Built with WCAG 2.2 AA compliance for universal accessibility.</p>
         <div class="login-feature-grid">
           <div class="login-feature-item">
             <span class="login-feature-icon">🧠</span>
@@ -149,10 +152,6 @@ function buildLoginHTML() {
           <button class="login-role-btn" data-role="doctor" type="button" aria-pressed="false">
             <span class="login-role-icon">🩺</span>
             <span class="login-role-label">Doctor</span>
-          </button>
-          <button class="login-role-btn" data-role="guardian" type="button" aria-pressed="false">
-            <span class="login-role-icon">👨‍👩‍👧</span>
-            <span class="login-role-label">Guardian</span>
           </button>
           <button class="login-role-btn" data-role="super_admin" type="button" aria-pressed="false">
             <span class="login-role-icon">🛡️</span>
@@ -367,19 +366,32 @@ function onLoginSuccess(user) {
   // Inject user badge into sidebar
   injectUserBadge(user);
 
+  // Show global logout button
+  const glogout = document.getElementById('global-logout');
+  if (glogout) {
+    glogout.style.display = 'flex';
+    if (!glogout.dataset.bound) {
+      glogout.dataset.bound = 'true';
+      glogout.addEventListener('click', handleLogout);
+    }
+  }
+
   // Inject role-specific navigation items
   injectRoleBasedNav(user);
 
   // Inject new screens
   injectRoleScreens(user);
 
+  // Re-render vault with doctor authoring when applicable
+  if (user.role === 'doctor' && typeof renderVault === 'function') {
+    renderVault();
+  }
+
   // Navigate to role-appropriate home
   if (user.role === 'super_admin') {
     navigateToScreen('admin-panel');
   } else if (user.role === 'doctor') {
-    navigateToScreen('clinician');
-  } else if (user.role === 'guardian') {
-    navigateToScreen('guardian-view');
+    navigateToScreen('doctor-dashboard');
   } else {
     navigateToScreen('dashboard');
   }
@@ -392,6 +404,10 @@ function onLoginSuccess(user) {
 function injectUserBadge(user) {
   const brand = document.querySelector('.sidebar-brand');
   if (!brand) return;
+
+  // Remove any login CTA once authenticated
+  const loginCta = document.getElementById('sidebar-login-cta');
+  if (loginCta) loginCta.remove();
 
   // Remove existing badge
   const existing = document.getElementById('sidebar-user-badge');
@@ -422,6 +438,19 @@ function handleLogout() {
   window.location.reload();
 }
 
+function ensureLoginCta() {
+  const sidebarFooter = document.querySelector('.sidebar-footer');
+  if (!sidebarFooter) return;
+  if (document.getElementById('sidebar-login-cta')) return;
+  const btn = document.createElement('button');
+  btn.id = 'sidebar-login-cta';
+  btn.className = 'btn btn-outline';
+  btn.style.marginTop = '10px';
+  btn.textContent = '🔐 Sign In';
+  btn.addEventListener('click', showLoginScreen);
+  sidebarFooter.appendChild(btn);
+}
+
 function injectRoleBasedNav(user) {
   // Remove previously injected nav items
   document.querySelectorAll('.injected-nav').forEach(el => el.remove());
@@ -431,22 +460,50 @@ function injectRoleBasedNav(user) {
 
   const items = [];
 
+  // Helper to hide built-in nav + screens for certain roles
+  const hideScreens = (keys = []) => {
+    keys.forEach(k => {
+      const navItem = document.querySelector(`.nav-item[data-screen="${k}"]`);
+      if (navItem) navItem.style.display = 'none';
+      const screenEl = document.getElementById(`screen-${k}`);
+      if (screenEl) screenEl.style.display = 'none';
+    });
+  };
+
   if (user.role === 'super_admin') {
     items.push({ screen: 'admin-panel', icon: '⚙️', label: 'IAM Panel', section: 'Administration' });
-    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
+    items.push({ screen: 'doctor-dashboard', icon: '🩺', label: 'Doctor Dashboard', section: 'Clinical' });
+    items.push({ screen: 'doctor-journal', icon: '📓', label: 'Patient Journal', section: null });
+    items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
+    items.push({ screen: 'chv-dashboard', icon: '🏥', label: 'FCHV Dashboard', section: 'Field' });
+    items.push({ screen: 'guardian-view', icon: '👁️', label: 'Guardian View', section: 'Family Access' });
   } else if (user.role === 'doctor') {
-    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
+    // Hide patient-facing navigation for doctors
+    hideScreens(['dashboard', 'copilot', 'checkin', 'career', 'support', 'milestones', 'triage', 'alerts', 'clinician', 'voice', 'signals', 'screening', 'insights']);
+    const hideNavOnly = (k) => { const n = document.querySelector(`.nav-item[data-screen="${k}"]`); if (n) n.style.display = 'none'; };
+    ['clinician','triage','alerts','voice','signals','screening','insights'].forEach(hideNavOnly);
+    items.push({ screen: 'doctor-dashboard', icon: '🩺', label: 'Doctor Dashboard', section: 'Provider' });
+    items.push({ screen: 'doctor-journal', icon: '📓', label: 'Patient Journal', section: null });
+    items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
+    items.push({ screen: 'vault', icon: '📚', label: 'Learn & Grow', section: 'Provider' });
+    items.push({ screen: 'community', icon: '💬', label: 'Community', section: null });
   } else if (user.role === 'guardian') {
     items.push({ screen: 'guardian-view', icon: '👁️', label: 'Patient Overview', section: 'Family Access' });
-    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
   } else if (user.role === 'patient') {
     items.push({ screen: 'journal', icon: '📓', label: 'Journal', section: 'My Health' });
     items.push({ screen: 'booking', icon: '📅', label: 'Book Consultation', section: null });
     items.push({ screen: 'my-settings', icon: '⚙️', label: 'Settings', section: null });
-    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
+    items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
   } else if (user.role === 'chv') {
-    items.push({ screen: 'chv-dashboard', icon: '🏥', label: 'CHV Dashboard', section: 'Field Work' });
-    items.push({ screen: 'counseling', icon: '🏥', label: 'Counseling Services', section: null });
+    // CHV gets a focused UI: only mini-admin field workflows.
+    hideScreens([
+      'dashboard', 'copilot', 'checkin', 'career', 'support', 'milestones', 'triage', 'alerts',
+      'clinician', 'voice', 'signals', 'screening', 'insights',
+      'journal', 'booking', 'my-settings',
+      'doctor-dashboard', 'doctor-journal', 'doctor-counseling',
+      'guardian-view', 'admin-panel', 'vault', 'community'
+    ]);
+    items.push({ screen: 'chv-dashboard', icon: '🏥', label: 'FCHV Dashboard', section: 'Field Work' });
   }
 
   let lastSection = null;
@@ -476,13 +533,6 @@ function injectRoleScreens(user) {
   const mainContent = document.querySelector('.main-content');
   if (!mainContent) return;
 
-  // Counseling screen for all roles
-  const counselingScreen = document.createElement('div');
-  counselingScreen.className = 'screen injected-screen';
-  counselingScreen.id = 'screen-counseling';
-  counselingScreen.innerHTML = buildCounselingScreenHTML();
-  mainContent.appendChild(counselingScreen);
-
   if (user.role === 'super_admin') {
     const adminScreen = document.createElement('div');
     adminScreen.className = 'screen injected-screen';
@@ -490,6 +540,63 @@ function injectRoleScreens(user) {
     adminScreen.innerHTML = buildAdminPanelHTML();
     mainContent.appendChild(adminScreen);
     setTimeout(() => initAdminPanel(), 100);
+
+    const docScreen = document.createElement('div');
+    docScreen.className = 'screen injected-screen';
+    docScreen.id = 'screen-doctor-dashboard';
+    docScreen.innerHTML = buildDoctorDashboardHTML();
+    mainContent.appendChild(docScreen);
+    setTimeout(() => initDoctorDashboard(), 60);
+
+    const journalScreen = document.createElement('div');
+    journalScreen.className = 'screen injected-screen';
+    journalScreen.id = 'screen-doctor-journal';
+    journalScreen.innerHTML = buildDoctorJournalHTML();
+    mainContent.appendChild(journalScreen);
+    setTimeout(() => initDoctorJournalScreen(), 60);
+
+    const careScreen = document.createElement('div');
+    careScreen.className = 'screen injected-screen';
+    careScreen.id = 'screen-doctor-counseling';
+    careScreen.innerHTML = buildDoctorCounselingHTML();
+    mainContent.appendChild(careScreen);
+    setTimeout(() => initDoctorCounseling(), 60);
+
+    const chvScreen = document.createElement('div');
+    chvScreen.className = 'screen injected-screen';
+    chvScreen.id = 'screen-chv-dashboard';
+    chvScreen.innerHTML = buildChvDashboardHTML();
+    mainContent.appendChild(chvScreen);
+    setTimeout(() => initChvDashboard(), 60);
+
+    const guardianScreen = document.createElement('div');
+    guardianScreen.className = 'screen injected-screen';
+    guardianScreen.id = 'screen-guardian-view';
+    guardianScreen.innerHTML = buildGuardianViewHTML(user);
+    mainContent.appendChild(guardianScreen);
+  }
+
+  if (user.role === 'doctor') {
+    const docScreen = document.createElement('div');
+    docScreen.className = 'screen injected-screen';
+    docScreen.id = 'screen-doctor-dashboard';
+    docScreen.innerHTML = buildDoctorDashboardHTML();
+    mainContent.appendChild(docScreen);
+    setTimeout(() => initDoctorDashboard(), 60);
+
+    const journalScreen = document.createElement('div');
+    journalScreen.className = 'screen injected-screen';
+    journalScreen.id = 'screen-doctor-journal';
+    journalScreen.innerHTML = buildDoctorJournalHTML();
+    mainContent.appendChild(journalScreen);
+    setTimeout(() => initDoctorJournalScreen(), 60);
+
+    const careScreen = document.createElement('div');
+    careScreen.className = 'screen injected-screen';
+    careScreen.id = 'screen-doctor-counseling';
+    careScreen.innerHTML = buildDoctorCounselingHTML();
+    mainContent.appendChild(careScreen);
+    setTimeout(() => initDoctorCounseling(), 60);
   }
 
   if (user.role === 'guardian') {
@@ -536,6 +643,413 @@ function injectRoleScreens(user) {
 }
 
 /* ══════════════════════════
+   DOCTOR DASHBOARD (Provider)
+   ══════════════════════════ */
+
+const DOCTOR_DEMO_PATIENTS = [
+  { id: 'JRN-2847', name: 'Patient A-2847', risk: 'high', score: 82, last: '12 min ago', concern: 'Crisis keyword + sleep <4h', adherence: 45 },
+  { id: 'JRN-004', name: 'Patient Delta', risk: 'high', score: 76, last: '25 min ago', concern: 'PHQ-9 severe; rising anxiety', adherence: 38 },
+  { id: 'JRN-002', name: 'Patient Beta', risk: 'monitor', score: 55, last: '1 h ago', concern: 'Sleep disruption · adherence 72%', adherence: 72 },
+  { id: 'JRN-003', name: 'Patient Gamma', risk: 'stable', score: 18, last: '3 h ago', concern: 'Improving; steady sleep 8h', adherence: 94 },
+  { id: 'JRN-005', name: 'Patient Epsilon', risk: 'stable', score: 22, last: '6 h ago', concern: 'Positive reframing patterns', adherence: 88 },
+];
+
+const DOCTOR_DEMO_ALERTS = [
+  { id: 'AL-01', severity: 'high', patient: 'Patient A-2847', event: 'Crisis keyword detected', time: '12 min ago' },
+  { id: 'AL-02', severity: 'high', patient: 'Patient Delta', event: 'PHQ-9 >= 18', time: '25 min ago' },
+  { id: 'AL-03', severity: 'medium', patient: 'Patient Beta', event: '3 nights <5h sleep', time: '1 h ago' },
+];
+
+const DOCTOR_DEMO_APPTS = [
+  { when: 'Today · 3:30 PM', patient: 'Patient Beta', mode: 'Video', status: 'Confirmed' },
+  { when: 'Today · 6:00 PM', patient: 'Patient Gamma', mode: 'Chat', status: 'Pending' },
+  { when: 'Tomorrow · 9:00 AM', patient: 'Patient A-2847', mode: 'Video', status: 'Pending' },
+];
+
+const DOCTOR_DEMO_TASKS = [
+  { text: 'Call Patient A-2847 (post-escalation)', done: false },
+  { text: 'Review voice summary for Patient Delta', done: false },
+  { text: 'Approve CHV intake for Patient Beta', done: true },
+  { text: 'Sign compliance attestation (weekly)', done: false },
+];
+
+function buildDoctorDashboardHTML() {
+  return `
+  <div class="section-heading">
+    <div>
+      <div class="section-title">🩺 Doctor Dashboard</div>
+      <div class="section-subtitle">Clinical cockpit · demo data (scripts/seed_demo)</div>
+    </div>
+  </div>
+
+  <div class="grid-3 gap-24 mb-24">
+    <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-value" id="doc-metric-patients">0</div><div class="metric-label">Active Patients</div></div>
+    <div class="metric-card"><div class="metric-icon">🚨</div><div class="metric-value" id="doc-metric-severe" style="color:var(--danger)">0</div><div class="metric-label">Severe Alerts</div></div>
+    <div class="metric-card"><div class="metric-icon">⏱️</div><div class="metric-value" id="doc-metric-response">—</div><div class="metric-label">Avg Response Time</div></div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">High-Risk Patients</div>
+      <div class="card-subtitle">Color-coded by severity</div>
+      <div id="doc-risk-list"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">Open Alerts</div>
+      <div class="card-subtitle">Acknowledge and route</div>
+      <div id="doc-alerts-list"></div>
+    </div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">Upcoming Consultations</div>
+      <div class="card-subtitle">Next 24 hours</div>
+      <div id="doc-appt-list"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">Intervene & Assign</div>
+      <div class="card-subtitle">Push milestones & resources (demo)</div>
+      <div class="grid-2 gap-12">
+        <div>
+          <div class="form-label">Milestone</div>
+          <select id="doc-milestone" class="text-area" style="min-height:44px;">
+            <option>Complete 3 days of journaling</option>
+            <option>Practice breathing for 7 days</option>
+            <option>Daily check-in streak (5 days)</option>
+          </select>
+        </div>
+        <div>
+          <div class="form-label">Resource</div>
+          <select id="doc-resource" class="text-area" style="min-height:44px;">
+            <option>Audio: Grounding Techniques</option>
+            <option>Video: 4-7-8 Breathing</option>
+            <option>Article: Work Anxiety Reset</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2 gap-12" style="margin-top:10px;">
+        <div>
+          <div class="form-label">Journal Prompt</div>
+          <input id="doc-journal-prompt" class="text-area" style="min-height:44px;" value="Enter a new milestone or task for the patient" />
+        </div>
+        <div>
+          <div class="form-label">Assign To</div>
+          <select id="doc-assign-patient" class="text-area" style="min-height:44px;">
+            ${DOCTOR_DEMO_PATIENTS.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="doc-btn-assign">📤 Push to Patient App</button>
+        <button class="btn btn-ghost" id="doc-btn-save-draft">💾 Save Draft</button>
+      </div>
+      <div id="doc-assign-status" style="font-size:12px;color:var(--text-muted);margin-top:6px;">No pending push.</div>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="card-title">Data Compliance & Security Monitor</div>
+    <div class="card-subtitle">Encryption, storage, wipe status</div>
+    <div class="grid-3 gap-16" id="doc-compliance-cards"></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Demo data from scripts/seed_demo; replace with live compliance endpoint.</div>
+  </div>
+
+  `;
+}
+
+function initDoctorDashboard() {
+  const patients = DOCTOR_DEMO_PATIENTS;
+  const alerts = DOCTOR_DEMO_ALERTS;
+  const appts = DOCTOR_DEMO_APPTS;
+  const tasks = DOCTOR_DEMO_TASKS;
+
+  const severeCount = alerts.filter(a => a.severity === 'high').length;
+  const active = patients.length;
+
+  setText('doc-metric-patients', active);
+  setText('doc-metric-severe', severeCount);
+  setText('doc-metric-response', '18m');
+
+  const riskList = document.getElementById('doc-risk-list');
+  if (riskList) {
+    riskList.innerHTML = patients
+      .filter(p => p.risk !== 'stable')
+      .map(p => `
+        <div class="record-item" style="margin-bottom:10px;border-left:4px solid ${p.risk === 'high' ? 'var(--danger)' : 'var(--warning)'};">
+          <div class="record-header">
+            <span class="record-date">${p.name}</span>
+            <span class="badge ${p.risk === 'high' ? 'badge-high' : 'badge-low'}">${p.risk.toUpperCase()}</span>
+          </div>
+          <div class="record-body">
+            Risk score: <strong>${p.score}/100</strong> · Last check-in: ${p.last}<br/>
+            ${p.concern}
+          </div>
+        </div>
+      `).join('') || '<div style="color:var(--text-muted);padding:12px;">No high-risk patients.</div>';
+  }
+
+  const alertList = document.getElementById('doc-alerts-list');
+  if (alertList) {
+    alertList.innerHTML = alerts.map(a => `
+      <div class="alert-card" style="border-color:${a.severity === 'high' ? 'rgba(248,113,113,0.35)' : 'rgba(251,191,36,0.25)'};">
+        <div class="alert-severity ${a.severity}"></div>
+        <div class="alert-body">
+          <div class="alert-title">${a.patient}</div>
+          <div class="alert-desc">${a.event}</div>
+          <div class="alert-time">${a.time}</div>
+        </div>
+        <button class="alert-action-btn" onclick="showToast('✅ Alert acknowledged')">Acknowledge</button>
+      </div>
+    `).join('');
+  }
+
+  const apptList = document.getElementById('doc-appt-list');
+  if (apptList) {
+    apptList.innerHTML = appts.map(a => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${a.when}</span>
+          <span class="badge badge-low">${a.mode}</span>
+        </div>
+        <div class="record-body">Patient: ${a.patient} · Status: ${a.status}</div>
+      </div>
+    `).join('');
+  }
+
+  // Assign / intervene actions
+  const assignBtn = document.getElementById('doc-btn-assign');
+  if (assignBtn && !assignBtn.dataset.bound) {
+    assignBtn.dataset.bound = 'true';
+    assignBtn.addEventListener('click', () => {
+      const patient = document.getElementById('doc-assign-patient')?.value || '';
+      const milestone = document.getElementById('doc-milestone')?.value || '';
+      const resource = document.getElementById('doc-resource')?.value || '';
+      const prompt = document.getElementById('doc-journal-prompt')?.value || '';
+      const status = document.getElementById('doc-assign-status');
+      if (status) status.textContent = `✅ Pushed to ${patient}: ${milestone} + ${resource}`;
+      showToast(`📤 Assigned to ${patient} · ${milestone}`);
+    });
+  }
+  const draftBtn = document.getElementById('doc-btn-save-draft');
+  if (draftBtn && !draftBtn.dataset.bound) {
+    draftBtn.dataset.bound = 'true';
+    draftBtn.addEventListener('click', () => {
+      const status = document.getElementById('doc-assign-status');
+      if (status) status.textContent = '💾 Draft saved locally (demo)';
+      showToast('Draft saved');
+    });
+  }
+
+  // Compliance cards
+  const compEl = document.getElementById('doc-compliance-cards');
+  if (compEl) {
+    const cards = [
+      { label: 'Encryption Status', value: 'AES-256-GCM Active', color: 'var(--success)' },
+      { label: 'Voice Files Stored', value: '0 (purged on edge)', color: 'var(--accent)' },
+      { label: 'Last Wipe', value: 'Today · 09:40', color: 'var(--warning)' },
+      { label: 'HIPAA Compliance', value: 'Verified (demo)', color: 'var(--success)' },
+      { label: 'Audit Hashes', value: '12 receipts', color: 'var(--text-secondary)' },
+      { label: 'Anomaly Alerts', value: '0 unresolved', color: 'var(--success)' },
+    ];
+    compEl.innerHTML = cards.map(c => `
+      <div class="spec-item">
+        <div class="spec-label">${c.label}</div>
+        <div class="spec-value" style="color:${c.color};">${c.value}</div>
+      </div>
+    `).join('');
+  }
+
+}
+
+function buildDoctorJournalHTML() {
+  return `
+  <div class="section-heading">
+    <div>
+      <div class="section-title">📓 Patient Journal</div>
+      <div class="section-subtitle">Live anonymized journal review, AI summary, and feedback workflow</div>
+    </div>
+  </div>
+
+  <div class="glass-card" style="margin-top:8px;">
+    <div class="grid-2 gap-24" style="margin-top:12px;">
+      <div>
+        <div class="card-title">Queue</div>
+        <div class="card-subtitle">Anonymous patient IDs with journal activity</div>
+        <div id="doc-live-queue" style="max-height:420px;overflow:auto;margin-top:8px;"></div>
+      </div>
+      <div>
+        <div class="card-title">Review & Feedback</div>
+        <div class="card-subtitle">AI summary + doctor note for patient</div>
+        <div id="doc-live-detail" class="record-item" style="margin:10px 0;">Select a patient ID from queue.</div>
+        <div class="form-group">
+          <label class="form-label" for="doc-live-feedback">Feedback To Patient</label>
+          <textarea id="doc-live-feedback" class="text-area" style="min-height:96px;" placeholder="Actionable feedback visible to patient..."></textarea>
+        </div>
+        <div class="grid-2 gap-12">
+          <div class="form-group">
+            <label class="form-label" for="doc-live-severity">Severity</label>
+            <select id="doc-live-severity" class="text-area" style="min-height:44px;">
+              <option value="low">Low</option>
+              <option value="moderate" selected>Moderate</option>
+              <option value="severe">Severe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="doc-live-call-now">Immediate Call</label>
+            <select id="doc-live-call-now" class="text-area" style="min-height:44px;">
+              <option value="false" selected>No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="doc-live-submit">💬 Save Feedback</button>
+          <button class="btn btn-danger" id="doc-live-call">📞 Mark Severe & Request Call</button>
+        </div>
+        <div id="doc-live-status" style="margin-top:8px;font-size:12px;color:var(--text-muted);">No action yet.</div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function initDoctorJournalScreen() {
+  initDoctorLiveJournalReview();
+}
+
+let doctorLiveSelected = { anonymousId: null, entryId: null };
+
+async function initDoctorLiveJournalReview() {
+  const queueEl = document.getElementById('doc-live-queue');
+  if (!queueEl) return;
+  queueEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">Loading queue...</div>';
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const qRes = await fetch(`${IAM_API}/api/doctor/queue`, { headers: hdrs });
+    const qData = await qRes.json();
+    const patients = qData.data?.patients || [];
+    if (!patients.length) {
+      queueEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">No anonymized journal patients found.</div>';
+      return;
+    }
+
+    queueEl.innerHTML = patients.slice(0, 12).map(p => `
+      <div class="clin-patient-card" data-doc-anon="${p.anonymousId}" style="cursor:pointer;margin-bottom:8px;">
+        <div class="clin-patient-title">
+          <div class="clin-patient-name">${p.anonymousId}</div>
+          <span class="badge badge-low">${p.totalEntries} entries</span>
+        </div>
+        <div class="clin-patient-meta">Unassessed: ${p.unassessedEntries} · Latest: ${new Date(p.latestEntry).toLocaleString()}</div>
+      </div>
+    `).join('');
+
+    queueEl.querySelectorAll('[data-doc-anon]').forEach(card => {
+      card.addEventListener('click', async () => {
+        const anonymousId = card.dataset.docAnon;
+        queueEl.querySelectorAll('[data-doc-anon]').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        await loadDoctorLivePatient(anonymousId);
+      });
+    });
+  } catch {
+    queueEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">Could not load doctor queue.</div>';
+  }
+
+  const submitBtn = document.getElementById('doc-live-submit');
+  if (submitBtn && !submitBtn.dataset.bound) {
+    submitBtn.dataset.bound = 'true';
+    submitBtn.addEventListener('click', submitDoctorLiveFeedback);
+  }
+
+  const severeBtn = document.getElementById('doc-live-call');
+  if (severeBtn && !severeBtn.dataset.bound) {
+    severeBtn.dataset.bound = 'true';
+    severeBtn.addEventListener('click', submitDoctorSevereCall);
+  }
+}
+
+async function loadDoctorLivePatient(anonymousId) {
+  const detail = document.getElementById('doc-live-detail');
+  if (!detail) return;
+  detail.innerHTML = 'Loading journals...';
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/doctor/journals/${encodeURIComponent(anonymousId)}?limit=5`, { headers: hdrs });
+    const data = await res.json();
+    const entries = data.data?.journals || [];
+    const latest = entries[0];
+    if (!latest) {
+      detail.innerHTML = 'No entries found for this ID.';
+      return;
+    }
+    doctorLiveSelected = { anonymousId, entryId: latest.id };
+    detail.innerHTML = `
+      <div class="record-header">
+        <span class="record-date">${anonymousId}</span>
+        <span class="badge badge-low">${latest.type || 'text'}</span>
+      </div>
+      <div class="record-body" style="margin-top:8px;">
+        <strong>AI Summary:</strong> ${escapeHtml(latest.aiSummary || 'No AI summary available.')}<br>
+        <strong>Timestamp:</strong> ${new Date(latest.createdAt).toLocaleString()}<br>
+        <strong>Entry:</strong> ${escapeHtml((latest.content || '').slice(0, 220))}${(latest.content || '').length > 220 ? '...' : ''}
+      </div>
+    `;
+  } catch {
+    detail.innerHTML = 'Could not load patient journals.';
+  }
+}
+
+async function submitDoctorLiveFeedback() {
+  if (!doctorLiveSelected.entryId) { showToast('Select a patient from queue first'); return; }
+  const status = document.getElementById('doc-live-status');
+  const feedback = document.getElementById('doc-live-feedback')?.value?.trim() || '';
+  const severity = document.getElementById('doc-live-severity')?.value || 'moderate';
+  const callNow = document.getElementById('doc-live-call-now')?.value === 'true';
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/doctor/assess/${doctorLiveSelected.entryId}`, {
+      method: 'POST', headers: hdrs,
+      body: JSON.stringify({
+        depressionScore: severity === 'severe' ? 8 : severity === 'moderate' ? 5 : 2,
+        stressLevel: severity === 'severe' ? 9 : severity === 'moderate' ? 6 : 3,
+        anxietyLevel: severity === 'severe' ? 9 : severity === 'moderate' ? 5 : 2,
+        clinicalNotes: feedback,
+        feedbackToPatient: feedback,
+        severity,
+        requiresImmediateCall: callNow,
+        recommendsConsultation: severity !== 'low',
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error?.message || 'Could not save feedback');
+    if (status) status.textContent = `Saved feedback at ${new Date().toLocaleTimeString()}`;
+    showToast('✅ Feedback shared with patient');
+  } catch (e) {
+    if (status) status.textContent = e.message;
+    showToast('⚠️ ' + e.message);
+  }
+}
+
+async function submitDoctorSevereCall() {
+  if (!doctorLiveSelected.anonymousId) { showToast('Select a patient from queue first'); return; }
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const res = await fetch(`${IAM_API}/api/severe/call/doctor/${encodeURIComponent(doctorLiveSelected.anonymousId)}`, {
+      method: 'POST', headers: hdrs,
+      body: JSON.stringify({ reason: 'Severe case marked by doctor dashboard' })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error?.message || 'Failed to request severe call');
+    showToast('🚨 Severe-call request logged for patient');
+    const status = document.getElementById('doc-live-status');
+    if (status) status.textContent = `Severe call requested at ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    showToast('⚠️ ' + e.message);
+  }
+}
+
+/* ══════════════════════════
    ADMIN IAM PANEL
    ══════════════════════════ */
 
@@ -554,7 +1068,6 @@ function buildAdminPanelHTML() {
   <div class="grid-3 gap-24 mb-24" id="admin-stats-cards">
     <div class="metric-card"><div class="metric-icon">🩺</div><div class="metric-value" id="admin-stat-doctors" style="color:#0ea5e9">0</div><div class="metric-label">Doctors</div></div>
     <div class="metric-card"><div class="metric-icon">🧑</div><div class="metric-value" id="admin-stat-patients" style="color:#10b981">0</div><div class="metric-label">Patients</div></div>
-    <div class="metric-card"><div class="metric-icon">👨‍👩‍👧</div><div class="metric-value" id="admin-stat-guardians" style="color:#f59e0b">0</div><div class="metric-label">Guardians</div></div>
   </div>
 
   <div class="grid-2 gap-24 mb-24">
@@ -580,6 +1093,7 @@ function buildAdminPanelHTML() {
             <option value="patient">🧑 Mental Patient</option>
             <option value="doctor">🩺 Doctor</option>
             <option value="guardian">👨‍👩‍👧 Guardian</option>
+            <option value="chv">🏥 FCHV</option>
           </select>
         </div>
         <div class="form-group" id="admin-doctor-type-group" style="display:none;">
@@ -590,7 +1104,7 @@ function buildAdminPanelHTML() {
             <option value="general">General / Overall</option>
           </select>
         </div>
-        <div class="form-group" id="admin-guardian-link-group" style="display:none;">
+        <div class="form-group" id="admin-linked-patient-group" style="display:none;">
           <label class="form-label" for="admin-new-linked-patient">Link to Patient *</label>
           <select id="admin-new-linked-patient" class="text-area" style="min-height:48px;resize:none;">
             <option value="">Select a patient...</option>
@@ -615,6 +1129,7 @@ function buildAdminPanelHTML() {
         <button class="chip" data-admin-filter="doctor" style="border-color:#0ea5e9;color:#0ea5e9">🩺 Doctors</button>
         <button class="chip" data-admin-filter="patient" style="border-color:#10b981;color:#10b981">🧑 Patients</button>
         <button class="chip" data-admin-filter="guardian" style="border-color:#f59e0b;color:#f59e0b">👨‍👩‍👧 Guardians</button>
+        <button class="chip" data-admin-filter="chv" style="border-color:#ec4899;color:#ec4899">🏥 FCHV</button>
       </div>
       <div id="admin-user-list" style="max-height:500px;overflow-y:auto;"></div>
     </div>
@@ -632,18 +1147,19 @@ function buildAdminPanelHTML() {
             <th style="color:#0ea5e9">🩺 Doctor</th>
             <th style="color:#10b981">🧑 Patient</th>
             <th style="color:#f59e0b">👨‍👩‍👧 Guardian</th>
+            <th style="color:#ec4899">🏥 FCHV</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>IAM User Management</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
-          <tr><td>AI Copilot Chat</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
-          <tr><td>Daily Check-In</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
-          <tr><td>Clinical Triage</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
-          <tr><td>Patient Records</td><td>✅</td><td>✅</td><td>Own only</td><td>Linked only</td></tr>
-          <tr><td>Counseling Services</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
-          <tr><td>Medication Management</td><td>✅</td><td>✅</td><td>View only</td><td>View only</td></tr>
-          <tr><td>Emergency Escalation</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
-          <tr><td>Compliance & Audit</td><td>✅</td><td>View only</td><td>❌</td><td>❌</td></tr>
+          <tr><td>IAM User Management</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>Mini</td></tr>
+          <tr><td>AI Copilot Chat</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Daily Check-In</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Clinical Triage</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>View</td></tr>
+          <tr><td>Patient Records</td><td>✅</td><td>✅</td><td>Own only</td><td>Linked only</td><td>Assigned only</td></tr>
+          <tr><td>Counseling Services</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>Referral</td></tr>
+          <tr><td>Medication Management</td><td>✅</td><td>✅</td><td>View only</td><td>View only</td><td>❌</td></tr>
+          <tr><td>Emergency Escalation</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Compliance & Audit</td><td>✅</td><td>View only</td><td>❌</td><td>❌</td><td>❌</td></tr>
         </tbody>
       </table>
     </div>
@@ -657,9 +1173,9 @@ function initAdminPanel() {
     roleSelect.addEventListener('change', () => {
       const role = roleSelect.value;
       const doctorGroup = document.getElementById('admin-doctor-type-group');
-      const guardianGroup = document.getElementById('admin-guardian-link-group');
+      const linkedGroup = document.getElementById('admin-linked-patient-group');
       if (doctorGroup) doctorGroup.style.display = role === 'doctor' ? 'block' : 'none';
-      if (guardianGroup) guardianGroup.style.display = role === 'guardian' ? 'block' : 'none';
+      if (linkedGroup) linkedGroup.style.display = role === 'guardian' ? 'block' : 'none';
     });
   }
 
@@ -692,11 +1208,9 @@ async function loadAdminUsers() {
       // Update stats
       const doctors = adminUsers.filter(u => u.role === 'doctor').length;
       const patients = adminPatients.length;
-      const guardians = adminUsers.filter(u => u.role === 'guardian').length;
 
       setText('admin-stat-doctors', doctors);
       setText('admin-stat-patients', patients);
-      setText('admin-stat-guardians', guardians);
 
       // Populate patient linker dropdown
       const linkedSelect = document.getElementById('admin-new-linked-patient');
@@ -799,11 +1313,6 @@ async function handleCreateUser(e) {
     return;
   }
 
-  if (role === 'guardian' && !linkedPatientId) {
-    if (error) error.textContent = 'Guardians must be linked to a patient. Create the patient first.';
-    return;
-  }
-
   try {
     const res = await fetch(`${IAM_API}/api/iam/users`, {
       method: 'POST',
@@ -826,127 +1335,113 @@ async function handleCreateUser(e) {
 }
 
 /* ══════════════════════════
-   COUNSELING SERVICES (MIT Health Inspired)
+   DOCTOR CARE OPERATIONS (Counseling)
    ══════════════════════════ */
 
-function buildCounselingScreenHTML() {
+const DOCTOR_COUNSELING_CASES = {
+  severe: [
+    { patient: 'Patient A-2847', trigger: 'Crisis keyword + sleep <4h', when: '12 min ago', mode: 'Video' },
+    { patient: 'Patient Delta', trigger: 'PHQ-9 severe', when: '25 min ago', mode: 'Call' },
+  ],
+  pinged: [
+    { patient: 'Patient Beta', trigger: 'Pinged doctor for follow-up', when: '1 h ago', mode: 'Chat' },
+    { patient: 'Patient Zeta', trigger: 'Requested reassurance', when: '3 h ago', mode: 'SMS' },
+  ],
+  scheduled: [
+    { patient: 'Patient Gamma', trigger: 'Weekly therapy cadence', when: 'Tomorrow · 9:00 AM', mode: 'Video' },
+    { patient: 'Patient Epsilon', trigger: 'Medication review cadence', when: 'Fri · 4:00 PM', mode: 'Call' },
+  ],
+};
+
+function buildDoctorCounselingHTML() {
   return `
   <div class="section-heading">
-    <div>
-      <div class="section-title">🏥 Mental Health & Counseling Services</div>
-      <div class="section-subtitle">Free, confidential care — individual/group therapy, medication management & urgent support</div>
-    </div>
-  </div>
-
-  <div class="glass-card mb-24" style="background:linear-gradient(135deg,rgba(10,132,255,0.06),rgba(52,211,153,0.04));border-color:rgba(10,132,255,0.15);">
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <span style="font-size:36px;">🏥</span>
-      <div style="flex:1;min-width:240px;">
-        <div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Student Mental Health & Counseling</div>
-        <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;">Free, confidential care for all users. We provide individual and group therapy, medication management, and urgent care. Our services address stress, anxiety, relationships, and academic issues. Available in-person and virtually.</div>
-      </div>
-    </div>
+    <div><div class="section-title">🏥 Care Operations (Doctor)</div><div class="section-subtitle">Who needs counseling now · who pinged you · scheduled cadence</div></div>
   </div>
 
   <div class="grid-3 gap-24 mb-24">
-    <div class="glass-card intervention-card" style="cursor:default;">
-      <div class="intervention-icon">🗣️</div>
-      <div class="intervention-title">Individual Therapy</div>
-      <div class="intervention-desc">One-on-one sessions with licensed therapists. Talk through personal challenges in a safe space.</div>
-      <div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="showToast('📅 Booking request sent for Individual Therapy')">Book Session</button></div>
-    </div>
-    <div class="glass-card intervention-card" style="cursor:default;">
-      <div class="intervention-icon">👥</div>
-      <div class="intervention-title">Group Therapy</div>
-      <div class="intervention-desc">Connect with peers facing similar challenges. Guided by a professional facilitator.</div>
-      <div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="showToast('📅 Booking request sent for Group Therapy')">Join Group</button></div>
-    </div>
-    <div class="glass-card intervention-card" style="cursor:default;">
-      <div class="intervention-icon">💊</div>
-      <div class="intervention-title">Medication Management</div>
-      <div class="intervention-desc">Psychiatric evaluation and medication support. Adjusted collaboratively with your care team.</div>
-      <div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="showToast('📅 Booking request sent for Medication Review')">Schedule Review</button></div>
-    </div>
-  </div>
-
-  <div class="grid-2 gap-24 mb-24">
-    <div class="glass-card" style="border-color:rgba(248,113,113,0.2);background:linear-gradient(135deg,rgba(248,113,113,0.04),rgba(255,255,255,0.95));">
-      <div class="card-title" style="color:var(--danger);">🚨 Urgent Care</div>
-      <div class="card-subtitle">For immediate mental health crisis support</div>
-      <div style="font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">
-        If you're experiencing a mental health crisis, our urgent care team is available for immediate support.
-        Same-day appointments are available for acute distress, panic episodes, or safety concerns.
-      </div>
-      <button class="btn btn-danger" onclick="showToast('🚨 Urgent care request submitted. A counselor will reach out within minutes.')">Request Urgent Support</button>
-    </div>
-
     <div class="glass-card">
-      <div class="card-title">📱 Virtual Appointments</div>
-      <div class="card-subtitle">Receive care from anywhere</div>
-      <div style="font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">
-        All counseling services are available via secure video calls. Whether you're in Cambridge, Lexington, or anywhere in Nepal — quality care is just a click away.
-      </div>
-      <div class="signal-item"><span class="signal-name">📹 Secure video sessions</span></div>
-      <div class="signal-item"><span class="signal-name">💬 Asynchronous messaging</span></div>
-      <div class="signal-item"><span class="signal-name">📞 Phone consultations</span></div>
-      <div class="signal-item"><span class="signal-name">🌐 Multilingual support (EN, NE, HI)</span></div>
+      <div class="card-title">🔴 Needs Immediate Counseling</div>
+      <div class="card-subtitle">Severe / high-risk cases</div>
+      <div id="doc-care-severe"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">📨 Pinged the Doctor</div>
+      <div class="card-subtitle">Patients requesting contact</div>
+      <div id="doc-care-pinged"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">📅 Periodic Scheduling</div>
+      <div class="card-subtitle">Standing therapy / med reviews</div>
+      <div id="doc-care-scheduled"></div>
     </div>
   </div>
 
-  <div class="glass-card mb-24">
-    <div class="card-title">📋 Service Categories</div>
-    <div class="card-subtitle">Comprehensive mental health support areas</div>
-    <div class="grid-4 gap-24" style="margin-top:16px;">
-      <div class="counseling-category-card">
-        <div style="font-size:24px;margin-bottom:8px;">😰</div>
-        <div style="font-size:14px;font-weight:700;">Stress & Anxiety</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Academic pressure, work stress, panic attacks</div>
-      </div>
-      <div class="counseling-category-card">
-        <div style="font-size:24px;margin-bottom:8px;">💔</div>
-        <div style="font-size:14px;font-weight:700;">Relationships</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Family, romantic, peer relationships</div>
-      </div>
-      <div class="counseling-category-card">
-        <div style="font-size:24px;margin-bottom:8px;">📚</div>
-        <div style="font-size:14px;font-weight:700;">Academic Issues</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Burnout, perfectionism, career uncertainty</div>
-      </div>
-      <div class="counseling-category-card">
-        <div style="font-size:24px;margin-bottom:8px;">🧠</div>
-        <div style="font-size:14px;font-weight:700;">Mental Health</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Depression, PTSD, eating disorders, OCD</div>
-      </div>
+  <div class="grid-2 gap-24">
+    <div class="glass-card">
+      <div class="card-title">Outreach & Follow-ups</div>
+      <div class="card-subtitle">Calls, chats, SMS/USSD fallback</div>
+      <div id="doc-outreach"></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">Compliance & Security</div>
+      <div class="card-subtitle">Audit receipts · edge purge · PHI scope</div>
+      <div id="doc-care-compliance"></div>
     </div>
   </div>
+  `;
+}
 
-  <div class="glass-card">
-    <div class="card-title">🧑‍⚕️ Our Care Team</div>
-    <div class="card-subtitle">Licensed, experienced mental health professionals</div>
-    <div class="grid-3 gap-24" style="margin-top:16px;">
-      <div class="counselor-card">
-        <div class="counselor-avatar">🧑‍⚕️</div>
-        <div class="counselor-name">Dr. Priya Adhikari</div>
-        <div class="counselor-title">Psychiatrist</div>
-        <div class="counselor-speciality">Medication Management · Anxiety Disorders</div>
-        <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showToast('📅 Booking with Dr. Priya Adhikari')">Book</button>
+function initDoctorCounseling() {
+  const renderList = (id, items, color) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = items.map(i => `
+      <div class="record-item" style="margin-bottom:10px;border-left:4px solid ${color};">
+        <div class="record-header">
+          <span class="record-date">${i.when}</span>
+          <span class="badge badge-low">${i.mode}</span>
+        </div>
+        <div class="record-body">${i.patient} · ${i.trigger}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="showToast('📞 Contacting ${i.patient}')">Contact</button>
+          <button class="btn btn-ghost btn-sm" onclick="showToast('📅 Added to schedule for ${i.patient}')">Schedule</button>
+        </div>
       </div>
-      <div class="counselor-card">
-        <div class="counselor-avatar">🧑‍💼</div>
-        <div class="counselor-name">Ms. Sarah Thompson</div>
-        <div class="counselor-title">Psychologist</div>
-        <div class="counselor-speciality">CBT · Trauma Recovery · Relationships</div>
-        <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showToast('📅 Booking with Ms. Sarah Thompson')">Book</button>
+    `).join('');
+  };
+
+  renderList('doc-care-severe', DOCTOR_COUNSELING_CASES.severe, 'var(--danger)');
+  renderList('doc-care-pinged', DOCTOR_COUNSELING_CASES.pinged, 'var(--accent)');
+  renderList('doc-care-scheduled', DOCTOR_COUNSELING_CASES.scheduled, 'var(--warning)');
+
+  const renderSimple = (id, items) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = items.map(c => `
+      <div class="spec-item">
+        <div class="spec-label">${c.label}</div>
+        <div class="spec-value" style="color:${c.color};">${c.value}</div>
       </div>
-      <div class="counselor-card">
-        <div class="counselor-avatar">🧑‍🏫</div>
-        <div class="counselor-name">Mr. Bikash Shrestha</div>
-        <div class="counselor-title">Counselor</div>
-        <div class="counselor-speciality">Academic Stress · Career Counseling</div>
-        <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showToast('📅 Booking with Mr. Bikash Shrestha')">Book</button>
+    `).join('');
+  };
+
+  // Reuse outreach & compliance from dashboard demo data
+  const renderOutreach = (items) => {
+    const el = document.getElementById('doc-outreach');
+    if (!el) return;
+    el.innerHTML = items.map(o => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${o.channel}</span>
+          <span class="badge badge-low">${o.status}</span>
+        </div>
+        <div class="record-body">${o.target} · ${o.note}</div>
       </div>
-    </div>
-  </div>`;
+    `).join('');
+  };
+
+  renderOutreach(DOCTOR_DEMO_OUTREACH);
+  renderSimple('doc-care-compliance', DOCTOR_DEMO_CARE_COMPLIANCE);
 }
 
 /* ══════════════════════════
@@ -1000,15 +1495,16 @@ function buildGuardianViewHTML(user) {
   </div>
 
   <div class="glass-card">
-    <div class="card-title">📞 Quick Actions</div>
-    <div class="card-subtitle">Contact the care team or request updates</div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-outline" onclick="showToast('📞 Request to speak with clinician sent')">📞 Contact Clinician</button>
-      <button class="btn btn-outline" onclick="showToast('📊 Weekly wellness report sent to your email')">📊 Request Weekly Report</button>
-      <button class="btn btn-danger" onclick="showToast('🚨 Emergency contact initiated')">🚨 Emergency Contact</button>
+    <div class="card-title">🔒 Privacy & Boundaries</div>
+    <div class="card-subtitle">What guardians can and cannot see</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">
+      Guardians can see: overall status, streaks, and AI-generated safety alerts.<br/>
+      Guardians cannot see: raw journal text, voice data, or clinician notes. All PII is hidden.
     </div>
   </div>`;
 }
+
+
 
 /* ══════════════════════════
    JOURNAL SCREEN (Patient)
@@ -1017,14 +1513,62 @@ function buildGuardianViewHTML(user) {
 function buildJournalScreenHTML() {
   return `
   <div class="section-heading">
-    <div><div class="section-title">📓 My Journal</div><div class="section-subtitle">Write freely · AI-powered wellness suggestions · Fully encrypted</div></div>
+    <div><div class="section-title">📓 My Journal</div><div class="section-subtitle">Text or video journal · dynamic checklists · AI summary + doctor feedback</div></div>
   </div>
 
   <div class="grid-2 gap-24 mb-24">
     <div class="glass-card">
       <div class="card-title">New Entry</div>
-      <div class="card-subtitle">Express yourself — emotional markers auto-detected</div>
+      <div class="card-subtitle">Express yourself with text/video and quick tick selections</div>
+      <div class="form-group">
+        <label class="form-label" for="journal-entry-type">Entry Type</label>
+        <select id="journal-entry-type" class="text-area" style="min-height:44px;">
+          <option value="text">Text Journal</option>
+          <option value="audio">Audio Journal</option>
+          <option value="video">Video Journal</option>
+        </select>
+      </div>
       <textarea class="text-area" id="journal-entry-text" placeholder="Write about how you're feeling today..." style="min-height:140px;"></textarea>
+      <div class="form-group" id="journal-audio-wrap" style="display:none;">
+        <label class="form-label" for="journal-audio-file">Audio Journal</label>
+        <input type="file" id="journal-audio-file" accept="audio/*" class="text-area" style="min-height:44px;" />
+      </div>
+      <div class="form-group" id="journal-video-wrap" style="display:none;">
+        <label class="form-label" for="journal-video-file">Video Journal</label>
+        <input type="file" id="journal-video-file" accept="video/*" class="text-area" style="min-height:44px;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quick Check (tick all that happened)</label>
+        <div id="journal-checklist" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:13px;color:var(--text-secondary);">
+          <label><input type="checkbox" value="poor_sleep" /> Poor sleep</label>
+          <label><input type="checkbox" value="panic_episode" /> Panic episode</label>
+          <label><input type="checkbox" value="social_withdrawal" /> Social withdrawal</label>
+          <label><input type="checkbox" value="overthinking" /> Overthinking</label>
+          <label><input type="checkbox" value="appetite_change" /> Appetite change</label>
+          <label><input type="checkbox" value="good_support" /> Got support from someone</label>
+        </div>
+      </div>
+      <div class="grid-2 gap-12">
+        <div class="form-group">
+          <label class="form-label" for="journal-mcq-mood">Mood Today</label>
+          <select id="journal-mcq-mood" class="text-area" style="min-height:44px;">
+            <option value="very_low">Very low</option>
+            <option value="low">Low</option>
+            <option value="neutral" selected>Neutral</option>
+            <option value="good">Good</option>
+            <option value="very_good">Very good</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="journal-mcq-energy">Energy Level</label>
+          <select id="journal-mcq-energy" class="text-area" style="min-height:44px;">
+            <option value="very_low">Very low</option>
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
       <div style="margin-top:12px;display:flex;gap:10px;">
         <button class="btn btn-primary" id="btn-journal-save">📝 Save Entry</button>
         <button class="btn btn-outline" id="btn-journal-ai">🧠 Get AI Suggestions</button>
@@ -1042,6 +1586,7 @@ function buildJournalScreenHTML() {
           <div style="font-weight:700;color:var(--warning);margin-bottom:4px;">💡 Professional support recommended</div>
           <div style="font-size:13px;color:var(--text-secondary);">Based on your recent entries, you may benefit from a consultation.</div>
           <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="navigateToScreen('booking')">📅 Book a Consultation</button>
+          <button class="btn btn-danger btn-sm" style="margin-top:8px;" id="btn-patient-severe-call">📞 Call Doctor (Severe)</button>
         </div>
       </div>
     </div>
@@ -1059,18 +1604,53 @@ function buildJournalScreenHTML() {
 function initJournalScreen() {
   const saveBtn = document.getElementById('btn-journal-save');
   const aiBtn = document.getElementById('btn-journal-ai');
+  const typeSelect = document.getElementById('journal-entry-type');
+  const audioWrap = document.getElementById('journal-audio-wrap');
+  const videoWrap = document.getElementById('journal-video-wrap');
+
+  if (typeSelect && audioWrap && videoWrap) {
+    typeSelect.addEventListener('change', () => {
+      audioWrap.style.display = typeSelect.value === 'audio' ? 'block' : 'none';
+      videoWrap.style.display = typeSelect.value === 'video' ? 'block' : 'none';
+    });
+  }
 
   if (saveBtn) saveBtn.addEventListener('click', async () => {
     const text = document.getElementById('journal-entry-text')?.value?.trim();
-    if (!text) { showToast('Write something first'); return; }
+    const type = document.getElementById('journal-entry-type')?.value || 'text';
+    const audioFile = document.getElementById('journal-audio-file')?.files?.[0] || null;
+    const videoFile = document.getElementById('journal-video-file')?.files?.[0] || null;
+    const checklist = Array.from(document.querySelectorAll('#journal-checklist input[type="checkbox"]:checked')).map(el => el.value);
+    const mcqAnswers = {
+      mood: document.getElementById('journal-mcq-mood')?.value || 'neutral',
+      energy: document.getElementById('journal-mcq-energy')?.value || 'medium',
+    };
+    if (!text && !audioFile && !videoFile && checklist.length === 0) { showToast('Write or select at least one journal signal'); return; }
     saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving...';
     try {
       const hdrs = window.__aegisGetAuthHeaders();
-      const res = await fetch(`${IAM_API}/api/journals`, { method: 'POST', headers: hdrs, body: JSON.stringify({ text }) });
+      const payload = {
+        type,
+        content: text || '',
+        checklist,
+        mcqAnswers,
+        audioMeta: type === 'audio' && audioFile
+          ? { fileName: audioFile.name, size: audioFile.size, mimeType: audioFile.type, capturedAt: new Date().toISOString() }
+          : null,
+        videoMeta: type === 'video' && videoFile
+          ? { fileName: videoFile.name, size: videoFile.size, mimeType: videoFile.type, capturedAt: new Date().toISOString() }
+          : null,
+      };
+      const res = await fetch(`${IAM_API}/api/journals`, { method: 'POST', headers: hdrs, body: JSON.stringify(payload) });
       const data = await res.json();
       if (data.ok) {
         document.getElementById('journal-entry-text').value = '';
-        document.getElementById('journal-save-status').textContent = '✅ Entry saved · ID: ' + (data.data?.entry?.id || '').slice(0,8);
+        const audioInput = document.getElementById('journal-audio-file');
+        if (audioInput) audioInput.value = '';
+        const videoInput = document.getElementById('journal-video-file');
+        if (videoInput) videoInput.value = '';
+        document.querySelectorAll('#journal-checklist input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        document.getElementById('journal-save-status').textContent = '✅ Entry saved · ID: ' + (data.data?.journal?.journalId || data.data?.entry?.journalId || '').slice(0,10);
         showToast('📝 Journal entry saved');
         loadJournalEntries();
       } else { throw new Error(data.error?.message || 'Save failed'); }
@@ -1099,6 +1679,24 @@ function initJournalScreen() {
     aiBtn.disabled = false; aiBtn.textContent = '🧠 Get AI Suggestions';
   });
 
+  const patientSevereCallBtn = document.getElementById('btn-patient-severe-call');
+  if (patientSevereCallBtn) {
+    patientSevereCallBtn.addEventListener('click', async () => {
+      try {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch(`${IAM_API}/api/severe/call/patient`, {
+          method: 'POST', headers: hdrs,
+          body: JSON.stringify({ reason: 'Patient requested immediate call from journal screen', preferredTime: 'asap' })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error?.message || 'Could not raise call request');
+        showToast('📞 Urgent callback requested from care team');
+      } catch (e) {
+        showToast('⚠️ ' + e.message);
+      }
+    });
+  }
+
   loadJournalEntries();
 }
 
@@ -1109,7 +1707,7 @@ async function loadJournalEntries() {
     const hdrs = window.__aegisGetAuthHeaders();
     const res = await fetch(`${IAM_API}/api/journals/mine`, { headers: hdrs });
     const data = await res.json();
-    const entries = data.data?.entries || [];
+    const entries = data.data?.entries || data.data?.journals || [];
     if (!entries.length) {
       list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No journal entries yet. Start writing above!</div>';
       return;
@@ -1118,9 +1716,22 @@ async function loadJournalEntries() {
       <div class="record-item" style="margin-bottom:10px;">
         <div class="record-header">
           <span class="record-date">${new Date(e.createdAt).toLocaleString()}</span>
-          ${e.aiSuggestions?.length ? '<span class="badge badge-low">AI Reviewed</span>' : ''}
+          <span class="badge badge-low">${(e.type || 'text').toUpperCase()}</span>
         </div>
-        <div class="record-body" style="font-size:14px;">${escapeHtml((e.text || '').slice(0, 300))}${(e.text || '').length > 300 ? '...' : ''}</div>
+        <div class="record-body" style="font-size:14px;">
+          <div><strong>ID:</strong> ${escapeHtml(e.anonymousId || 'N/A')} · <strong>Journal ID:</strong> ${escapeHtml(e.journalId || e.id || '')}</div>
+          <div style="margin-top:6px;">${escapeHtml((e.content || '').slice(0, 280))}${(e.content || '').length > 280 ? '...' : ''}</div>
+          ${e.aiSummary ? `<div style="margin-top:8px;"><strong>AI Summary:</strong> ${escapeHtml(e.aiSummary)}</div>` : ''}
+          ${Array.isArray(e.checklist) && e.checklist.length ? `<div style="margin-top:6px;"><strong>Checked:</strong> ${escapeHtml(e.checklist.join(', '))}</div>` : ''}
+          ${e.audioMeta ? `<div style="margin-top:6px;"><strong>Audio:</strong> ${escapeHtml(e.audioMeta.fileName || 'attached')} (${Math.round((e.audioMeta.size || 0) / 1024)} KB)</div>` : ''}
+          ${e.videoMeta ? `<div style="margin-top:6px;"><strong>Video:</strong> ${escapeHtml(e.videoMeta.fileName || 'attached')} (${Math.round((e.videoMeta.size || 0) / 1024)} KB)</div>` : ''}
+          ${Array.isArray(e.doctorAssessments) && e.doctorAssessments.length ? `
+            <div style="margin-top:8px;padding:8px;border:1px solid var(--border-glass);border-radius:10px;background:var(--bg-surface);">
+              <strong>Doctor Feedback:</strong><br>
+              ${e.doctorAssessments.slice(-1).map(d => `${escapeHtml(d.feedbackToPatient || d.clinicalNotes || 'No note')} · Severity: ${escapeHtml((d.severity || 'moderate').toUpperCase())} · ${new Date(d.createdAt).toLocaleString()}`).join('')}
+            </div>
+          ` : ''}
+        </div>
       </div>
     `).join('');
   } catch {
@@ -1403,7 +2014,7 @@ function initSettingsScreen() {
 function buildChvDashboardHTML() {
   return `
   <div class="section-heading">
-    <div><div class="section-title">🏥 FCHV Field Dashboard</div><div class="section-subtitle">Door-to-door community health screening & patient registration</div></div>
+    <div><div class="section-title">🏥 FCHV Field Dashboard</div><div class="section-subtitle">Mini-admin for offline areas: create accounts and update on behalf of patients</div></div>
   </div>
 
   <div class="grid-2 gap-24 mb-24">
@@ -1437,7 +2048,137 @@ function buildChvDashboardHTML() {
         <div style="color:var(--text-muted);text-align:center;padding:24px;">Loading patients...</div>
       </div>
     </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="card-title">🧾 Update On Behalf of Patient</div>
+    <div class="card-subtitle">For offline communities where patient has no smartphone access</div>
+    <div class="grid-2 gap-24" style="margin-top:12px;">
+      <div>
+        <div class="spec-item" style="margin-bottom:10px;">
+          <div class="spec-label">Selected Patient</div>
+          <div class="spec-value" id="chv-selected-patient">Select a patient from your list</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="chv-manage-name">Patient Name</label>
+          <input id="chv-manage-name" class="text-area" style="min-height:44px;" placeholder="Patient full name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="chv-manage-phone">Patient Phone</label>
+          <input id="chv-manage-phone" class="text-area" style="min-height:44px;" placeholder="+977-9800000000" />
+        </div>
+        <div class="grid-2 gap-12">
+          <div class="form-group">
+            <label class="form-label" for="chv-manage-hour">Check-in Hour</label>
+            <input id="chv-manage-hour" type="number" min="0" max="23" class="text-area" style="min-height:44px;" value="20" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="chv-manage-minute">Check-in Minute</label>
+            <input id="chv-manage-minute" type="number" min="0" max="59" class="text-area" style="min-height:44px;" value="0" />
+          </div>
+        </div>
+        <button class="btn btn-outline" id="btn-chv-update-patient">💾 Update Patient Profile</button>
+      </div>
+
+      <div>
+        <div class="form-group">
+          <label class="form-label" for="chv-proxy-note">Proxy Journal Note</label>
+          <textarea id="chv-proxy-note" class="text-area" style="min-height:96px;" placeholder="Patient spoke this in field visit..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quick Tick Signals</label>
+          <div id="chv-proxy-checklist" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:13px;color:var(--text-secondary);">
+            <label><input type="checkbox" value="poor_sleep" /> Poor sleep</label>
+            <label><input type="checkbox" value="panic_episode" /> Panic episode</label>
+            <label><input type="checkbox" value="social_withdrawal" /> Social withdrawal</label>
+            <label><input type="checkbox" value="medication_missed" /> Medication missed</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="chv-proxy-mood">Mood (from interview)</label>
+          <select id="chv-proxy-mood" class="text-area" style="min-height:44px;">
+            <option value="very_low">Very low</option>
+            <option value="low">Low</option>
+            <option value="neutral" selected>Neutral</option>
+            <option value="good">Good</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-chv-add-journal">📝 Save Journal On Behalf</button>
+
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-glass);">
+          <div class="form-group">
+            <label class="form-label" for="chv-checkin-note">Check-In Note</label>
+            <input id="chv-checkin-note" class="text-area" style="min-height:44px;" placeholder="Short note for this check-in" />
+          </div>
+          <div class="grid-2 gap-12">
+            <div class="form-group">
+              <label class="form-label" for="chv-checkin-mood">Mood (1-10)</label>
+              <input id="chv-checkin-mood" type="number" min="1" max="10" class="text-area" style="min-height:44px;" value="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="chv-checkin-anxiety">Anxiety (1-10)</label>
+              <input id="chv-checkin-anxiety" type="number" min="1" max="10" class="text-area" style="min-height:44px;" value="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="chv-checkin-stress">Stress (1-10)</label>
+              <input id="chv-checkin-stress" type="number" min="1" max="10" class="text-area" style="min-height:44px;" value="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="chv-checkin-sleep">Sleep Hours</label>
+              <input id="chv-checkin-sleep" type="number" min="0" max="24" step="0.5" class="text-area" style="min-height:44px;" value="7" />
+            </div>
+          </div>
+          <button class="btn btn-outline" id="btn-chv-add-checkin">📊 Submit Check-In On Behalf</button>
+        </div>
+      </div>
+    </div>
+    <div id="chv-manage-status" style="margin-top:10px;font-size:13px;color:var(--text-muted);">No update yet.</div>
   </div>`;
+}
+
+let chvManagedPatients = [];
+let selectedChvPatientId = null;
+
+function renderChvPatientList(patients) {
+  const list = document.getElementById('chv-patient-list');
+  if (!list) return;
+  if (!patients.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No patients registered yet. Use the form to create your first.</div>';
+    return;
+  }
+  list.innerHTML = patients.map(p => `
+    <div class="clin-patient-card stable ${selectedChvPatientId === p.id ? 'active' : ''}" data-chv-patient-id="${p.id}" style="margin-bottom:8px;cursor:pointer;">
+      <div class="clin-patient-title">
+        <div class="clin-patient-name">${escapeHtml(p.fullName)}</div>
+        <span class="badge badge-low">Registered</span>
+      </div>
+      <div class="clin-patient-meta">${escapeHtml(p.email)} · Anonymous ID: ${p.anonymousId || p.anonymousJournalId || 'N/A'}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-chv-patient-id]').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedChvPatientId = card.dataset.chvPatientId;
+      renderChvPatientList(chvManagedPatients);
+      populateChvManagePanel();
+    });
+  });
+}
+
+function populateChvManagePanel() {
+  const patient = chvManagedPatients.find(p => p.id === selectedChvPatientId);
+  const selectedEl = document.getElementById('chv-selected-patient');
+  if (selectedEl) {
+    selectedEl.textContent = patient ? `${patient.fullName} (${patient.anonymousId || 'N/A'})` : 'Select a patient from your list';
+  }
+  const nameEl = document.getElementById('chv-manage-name');
+  const phoneEl = document.getElementById('chv-manage-phone');
+  const hourEl = document.getElementById('chv-manage-hour');
+  const minuteEl = document.getElementById('chv-manage-minute');
+  if (nameEl) nameEl.value = patient?.fullName || '';
+  if (phoneEl) phoneEl.value = patient?.phone || '';
+  if (hourEl) hourEl.value = String(patient?.checkinSchedule?.hour ?? 20);
+  if (minuteEl) minuteEl.value = String(patient?.checkinSchedule?.minute ?? 0);
 }
 
 function initChvDashboard() {
@@ -1470,6 +2211,116 @@ function initChvDashboard() {
     } catch (e) { showToast('⚠️ ' + e.message); }
     regBtn.disabled = false; regBtn.textContent = '➕ Register & Create Journal';
   });
+
+  const updateBtn = document.getElementById('btn-chv-update-patient');
+  if (updateBtn && !updateBtn.dataset.bound) {
+    updateBtn.dataset.bound = 'true';
+    updateBtn.addEventListener('click', async () => {
+      if (!selectedChvPatientId) { showToast('Select a patient first'); return; }
+      const fullName = document.getElementById('chv-manage-name')?.value?.trim() || '';
+      const phone = document.getElementById('chv-manage-phone')?.value?.trim() || '';
+      const hour = Number(document.getElementById('chv-manage-hour')?.value || 20);
+      const minute = Number(document.getElementById('chv-manage-minute')?.value || 0);
+      const statusEl = document.getElementById('chv-manage-status');
+      updateBtn.disabled = true;
+      updateBtn.textContent = '⏳ Updating...';
+      try {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch(`${IAM_API}/api/chv/patients/${encodeURIComponent(selectedChvPatientId)}`, {
+          method: 'PUT',
+          headers: hdrs,
+          body: JSON.stringify({
+            fullName,
+            phone,
+            checkinSchedule: { hour, minute, timezone: 'Asia/Kathmandu' },
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error?.message || 'Could not update patient profile');
+        if (statusEl) statusEl.textContent = `✅ Updated at ${new Date().toLocaleTimeString()}`;
+        showToast('✅ Patient updated on behalf by FCHV');
+        loadChvPatients();
+      } catch (e) {
+        if (statusEl) statusEl.textContent = e.message;
+        showToast('⚠️ ' + e.message);
+      }
+      updateBtn.disabled = false;
+      updateBtn.textContent = '💾 Update Patient Profile';
+    });
+  }
+
+  const journalBtn = document.getElementById('btn-chv-add-journal');
+  if (journalBtn && !journalBtn.dataset.bound) {
+    journalBtn.dataset.bound = 'true';
+    journalBtn.addEventListener('click', async () => {
+      if (!selectedChvPatientId) { showToast('Select a patient first'); return; }
+      const note = document.getElementById('chv-proxy-note')?.value?.trim() || '';
+      if (!note) { showToast('Add a journal note first'); return; }
+      const checklist = Array.from(document.querySelectorAll('#chv-proxy-checklist input[type="checkbox"]:checked')).map(el => el.value);
+      const mood = document.getElementById('chv-proxy-mood')?.value || 'neutral';
+      const statusEl = document.getElementById('chv-manage-status');
+      journalBtn.disabled = true;
+      journalBtn.textContent = '⏳ Saving...';
+      try {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch(`${IAM_API}/api/chv/patients/${encodeURIComponent(selectedChvPatientId)}/journals`, {
+          method: 'POST',
+          headers: hdrs,
+          body: JSON.stringify({
+            type: 'text',
+            content: note,
+            checklist,
+            mcqAnswers: { mood, source: 'chv_proxy' },
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error?.message || 'Could not save proxy journal');
+        if (statusEl) statusEl.textContent = `✅ Proxy journal saved at ${new Date().toLocaleTimeString()}`;
+        const noteEl = document.getElementById('chv-proxy-note');
+        if (noteEl) noteEl.value = '';
+        document.querySelectorAll('#chv-proxy-checklist input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        showToast('📝 Journal captured on behalf of patient');
+      } catch (e) {
+        if (statusEl) statusEl.textContent = e.message;
+        showToast('⚠️ ' + e.message);
+      }
+      journalBtn.disabled = false;
+      journalBtn.textContent = '📝 Save Journal On Behalf';
+    });
+  }
+
+  const checkinBtn = document.getElementById('btn-chv-add-checkin');
+  if (checkinBtn && !checkinBtn.dataset.bound) {
+    checkinBtn.dataset.bound = 'true';
+    checkinBtn.addEventListener('click', async () => {
+      if (!selectedChvPatientId) { showToast('Select a patient first'); return; }
+      const mood = Number(document.getElementById('chv-checkin-mood')?.value || 5);
+      const anxiety = Number(document.getElementById('chv-checkin-anxiety')?.value || 5);
+      const stress = Number(document.getElementById('chv-checkin-stress')?.value || 5);
+      const sleepHours = Number(document.getElementById('chv-checkin-sleep')?.value || 7);
+      const journalText = document.getElementById('chv-checkin-note')?.value?.trim() || '';
+      const statusEl = document.getElementById('chv-manage-status');
+      checkinBtn.disabled = true;
+      checkinBtn.textContent = '⏳ Submitting...';
+      try {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch(`${IAM_API}/api/chv/patients/${encodeURIComponent(selectedChvPatientId)}/checkins`, {
+          method: 'POST',
+          headers: hdrs,
+          body: JSON.stringify({ mood, anxiety, stress, sleepHours, journalText }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error?.message || 'Could not submit check-in');
+        if (statusEl) statusEl.textContent = `✅ Check-in submitted at ${new Date().toLocaleTimeString()}`;
+        showToast(`📊 Check-in submitted · Risk ${data.data?.risk?.riskLevel || 'unknown'}`);
+      } catch (e) {
+        if (statusEl) statusEl.textContent = e.message;
+        showToast('⚠️ ' + e.message);
+      }
+      checkinBtn.disabled = false;
+      checkinBtn.textContent = '📊 Submit Check-In On Behalf';
+    });
+  }
 }
 
 async function loadChvPatients() {
@@ -1480,19 +2331,12 @@ async function loadChvPatients() {
     const res = await fetch(`${IAM_API}/api/chv/my-patients`, { headers: hdrs });
     const data = await res.json();
     const patients = data.data?.patients || [];
-    if (!patients.length) {
-      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">No patients registered yet. Use the form to create your first.</div>';
-      return;
+    chvManagedPatients = patients;
+    if (selectedChvPatientId && !patients.some(p => p.id === selectedChvPatientId)) {
+      selectedChvPatientId = null;
     }
-    list.innerHTML = patients.map(p => `
-      <div class="clin-patient-card stable" style="margin-bottom:8px;">
-        <div class="clin-patient-title">
-          <div class="clin-patient-name">${escapeHtml(p.fullName)}</div>
-          <span class="badge badge-low">Registered</span>
-        </div>
-        <div class="clin-patient-meta">${escapeHtml(p.email)} · Anonymous ID: ${p.anonymousJournalId || 'N/A'}</div>
-      </div>
-    `).join('');
+    renderChvPatientList(chvManagedPatients);
+    populateChvManagePanel();
   } catch {
     list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:24px;">Could not load patients.</div>';
   }
@@ -1503,34 +2347,13 @@ async function loadChvPatients() {
    ══════════════════════════ */
 
 function bootIAM() {
-  // If a valid session exists, validate it and go straight to app
-  if (session.token && session.user) {
-    // Quick validation
-    fetch(`${IAM_API}/api/auth/me`, { headers: getAuthHeaders() })
-      .then(res => res.json())
-      .then(data => {
-        if (data.ok && data.data?.user) {
-          session.user = data.data.user;
-          localStorage.setItem('aegis_user', JSON.stringify(session.user));
-          onLoginSuccess(session.user);
-        } else {
-          clearSession();
-          showLoginScreen();
-        }
-      })
-      .catch(() => {
-        // If backend is down, still let them in with cached session
-        onLoginSuccess(session.user);
-      });
-  } else {
-    showLoginScreen();
-  }
+  // Always require explicit sign-in on load
+  clearSession();
+  showLoginScreen();
 }
 
-// Initialize when DOM is ready
+// Initialize immediately (with small fallback on DOM ready)
+bootIAM();
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootIAM);
-} else {
-  // Small delay to ensure app.js navigation has initialized
-  setTimeout(bootIAM, 150);
 }

@@ -26,6 +26,23 @@ const state = {
   escalations: [],
   avatarXp: 18,
   stability: 68,
+  gamify: {
+    xp: 18,
+    level: 3,
+    nextLevelXp: 100,
+    quests: [
+      { title: 'Complete today’s check-in', xp: 10, type: 'daily', done: false },
+      { title: 'Run a 60s breathing exercise', xp: 8, type: 'daily', done: true },
+      { title: 'Post a supportive comment', xp: 12, type: 'weekly', done: false },
+      { title: 'Review one clinical summary', xp: 15, type: 'weekly', done: false },
+    ],
+    leaderboard: [
+      { name: 'You', score: 1240 },
+      { name: 'Dr. Adhikari', score: 1420 },
+      { name: 'Supporter Sunita', score: 1190 },
+      { name: 'Guardian Mira', score: 980 },
+    ],
+  },
   clinicianUi: {
     riskFilter: 'all',
     dateFilter: 'all',
@@ -1117,6 +1134,129 @@ function showToast(msg) {
   setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 400); }, 3500);
 }
 
+// ── Scheduled Check-In Call (Right to Decline) ──
+const CHECKIN_DECLINE_REASONS = ['Not in the mood', 'Busy right now', 'Feeling okay, skipping', 'Need more time'];
+
+function openCheckinCallOverlay() {
+  const overlay = document.getElementById('checkin-call-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  const status = document.getElementById('checkin-call-status');
+  if (status) status.textContent = '';
+}
+
+function closeCheckinCallOverlay() {
+  const overlay = document.getElementById('checkin-call-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function logCheckinDecline(reason) {
+  const status = document.getElementById('checkin-call-status');
+  if (status) status.textContent = 'Logging your choice...';
+  try {
+    const hdrs = (window.__aegisGetAuthHeaders && window.__aegisGetAuthHeaders()) || { 'Content-Type': 'application/json' };
+    if (!hdrs['Content-Type']) hdrs['Content-Type'] = 'application/json';
+    const res = await fetch(`${API}/api/journals/decline-checkin`, {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify({ reason: reason || 'unspecified' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (status) status.textContent = data.data?.message || 'Skip recorded. Streak preserved.';
+      showToast('⏭ Check-in skipped · streak preserved');
+    } else {
+      if (status) status.textContent = data.error?.message || 'Could not sync skip — noted locally.';
+      showToast('⚠️ Skip noted locally (sign in to sync)');
+    }
+  } catch {
+    if (status) status.textContent = 'Offline — skip noted locally.';
+    showToast('⚠️ Skip noted locally');
+  }
+}
+
+function handleDeclineCheckin(reason) {
+  closeCheckinCallOverlay();
+  logCheckinDecline(reason || 'Not specified');
+}
+
+function initCheckinCallUi() {
+  const openBtn = document.getElementById('btn-open-checkin-call');
+  if (openBtn && !openBtn.dataset.bound) {
+    openBtn.dataset.bound = 'true';
+    openBtn.addEventListener('click', () => openCheckinCallOverlay());
+  }
+
+  const quickSkip = document.getElementById('btn-decline-checkin-quick');
+  if (quickSkip && !quickSkip.dataset.bound) {
+    quickSkip.dataset.bound = 'true';
+    quickSkip.addEventListener('click', () => handleDeclineCheckin('Skipped from banner'));
+  }
+
+  const answerBtn = document.getElementById('btn-call-answer');
+  if (answerBtn && !answerBtn.dataset.bound) {
+    answerBtn.dataset.bound = 'true';
+    answerBtn.addEventListener('click', () => {
+      closeCheckinCallOverlay();
+      navigateToScreen('checkin');
+      showToast('💚 Starting your check-in now');
+    });
+  }
+
+  const closeBtn = document.getElementById('btn-call-close');
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.dataset.bound = 'true';
+    closeBtn.addEventListener('click', closeCheckinCallOverlay);
+  }
+
+  document.querySelectorAll('[data-checkin-reason]').forEach(btn => {
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => handleDeclineCheckin(btn.dataset.checkinReason || btn.textContent.trim()));
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCheckinCallOverlay();
+  });
+}
+
+// ── Gamification ──
+function renderGamification() {
+  const { gamify } = state;
+  const xpBar = document.getElementById('xp-bar');
+  const xpLevel = document.getElementById('xp-level');
+  const xpPoints = document.getElementById('xp-points');
+  if (xpBar) xpBar.style.width = Math.min(100, (gamify.xp / gamify.nextLevelXp) * 100) + '%';
+  if (xpLevel) xpLevel.textContent = `Level ${gamify.level} · Sprout`;
+  if (xpPoints) xpPoints.textContent = `${gamify.xp} / ${gamify.nextLevelXp} XP`;
+
+  const questList = document.getElementById('quest-list');
+  if (questList) {
+    questList.innerHTML = gamify.quests.map(q => `
+      <div class="quest-item ${q.done ? 'quest-done' : ''}">
+        <div>
+          <div style="font-weight:700;">${q.title}</div>
+          <div class="quest-meta">${q.type === 'daily' ? 'Daily' : 'Weekly'} · +${q.xp} XP</div>
+        </div>
+        <div class="quest-badge">${q.done ? '✅ Done' : '➕ ${q.xp} XP'}</div>
+      </div>
+    `).join('');
+  }
+
+  const lb = document.getElementById('leaderboard-list');
+  if (lb) {
+    lb.innerHTML = gamify.leaderboard
+      .sort((a,b) => b.score - a.score)
+      .map((p, idx) => `
+        <div class="leaderboard-row">
+          <div class="leaderboard-rank ${idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : ''}">${idx+1}</div>
+          <div style="flex:1;">${p.name}</div>
+          <div class="leaderboard-score">${p.score} pts</div>
+        </div>
+      `).join('');
+  }
+}
+
 // ── Helpers ──
 function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 function setTextAndColor(id, val, col) { const el = document.getElementById(id); if (el) { el.textContent = val; el.style.color = col; } }
@@ -1130,6 +1270,8 @@ updateSignals();
 refreshRemote();
 initCareerSupportFeatures();
 initClinicianDashboard();
+initCheckinCallUi();
+renderGamification();
 
 // Auto-update greeting based on time
 const hour = new Date().getHours();

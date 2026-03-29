@@ -1,1 +1,87 @@
-[]
+[
+  {
+    "id": "c20b1b6e-6a13-4cfc-9ad0-13460611903f",
+    "journalId": "JE-MNBFN1Y3-00NU",
+    "userId": "558b621e-20d4-43c1-8b54-4b79ae25bb67",
+    "anonymousId": "JRN-TCV5",
+    "type": "text",
+    "content": "terror lagiraxa yaar",
+    "audioUrl": null,
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 1,
+      "concernIndicators": 1,
+      "wordCount": 10,
+      "analyzedAt": "2026-03-29T07:23:21.045Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [],
+        "cbtSuggestion": ""
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [],
+      "cbtSuggestion": ""
+    },
+    "aiSummary": "Emotion trend: neutral",
+    "checklist": [
+      "poor_sleep"
+    ],
+    "mcqAnswers": {
+      "mood": "very_good",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 1,
+        "concernIndicators": 1,
+        "wordCount": 10,
+        "analyzedAt": "2026-03-29T07:23:21.045Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [],
+          "cbtSuggestion": ""
+        }
+      },
+      "suggestions": [
+        {
+          "title": "5-Minute Calm Down",
+          "desc": "Slow, deep breaths with gentle counting",
+          "icon": "🌬️"
+        },
+        {
+          "title": "Take a 10-Minute Walk",
+          "desc": "A gentle walk can shift your perspective",
+          "icon": "🚶"
+        },
+        {
+          "title": "Understanding Your Emotions",
+          "desc": "A short guide to recognizing what you feel",
+          "icon": "📖"
+        },
+        {
+          "title": "Calm Piano Playlist",
+          "desc": "Soft instrumental tracks to help you unwind",
+          "icon": "🎵"
+        }
+      ],
+      "generatedAt": "2026-03-29T07:23:21.629Z",
+      "message": "Thank you for journaling today. Every entry is a step forward. 🌱"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T07:23:21.627Z",
+    "declineNote": null,
+    "checkinDecline": null
+  }
+]

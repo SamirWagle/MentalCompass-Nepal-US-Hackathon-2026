@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/AI-Google%20Gemini-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Security-HIPAA%20%7C%20GDPR-green?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Architecture-Zero--Trust-critical?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-purple?style=for-the-badge" />
@@ -25,7 +25,7 @@ Built for Nepal-US Hackathon 2026:
 - Cross-platform experience:
   - **Mobile app** (Expo React Native, 13 screens).
   - **Web app** (single-page app with calm/full UX modes and 20+ views).
-  - **Backend API** (Express + Gemini integration + local JSON persistence).
+  - **Backend API** (Express + Azure OpenAI integration + local JSON persistence).
 
 ### Identity & Access Management (IAM)
 - **Super Admin–controlled IAM system** — only super admin (and CHVs for patients) can create accounts.
@@ -34,17 +34,18 @@ Built for Nepal-US Hackathon 2026:
   - 🩺 **Doctor** (psychiatrist, psychologist, general) — Reads anonymized journals by ID, rates conditions, consults. **Pays to onboard.**
   - 🧑 **Patient** — Daily journaling (text/voice/wearable), receives AI habit suggestions, opts into doctor consultation. **Pays on consult only.**
   - 👨‍👩‍👧 **Guardian** — Read-only linked patient monitoring, alerts, care team contact.
-  - 👩‍⚕️ **CHV (Community Health Volunteer)** — Mini Admin: creates patient accounts, door-to-door screening, follow-up tracking.
+  - 👩‍⚕️ **FCHV/CHV (Community Health Volunteer)** — Mini Admin for low-connectivity/offline communities: creates patient accounts and performs updates/check-ins/journal capture on behalf of managed patients.
 - **Anonymous IDs** — Patients get `JRN-XXXX` format IDs. Doctors NEVER see real names.
 - **JWT authentication** with secure bcrypt password hashing.
 
 ### Journaling System (Core Product)
-- **Multi-input journaling**: text, voice, wearable data, scheduled calls.
-- **AI sentiment analysis** on each entry (keyword-based + extensible to Gemini).
+- **Multi-input journaling**: text, audio, video, wearable data, scheduled calls.
+- **AI sentiment analysis** on each entry (Azure OpenAI with local fallback).
 - **AI gentle suggestions**: music, articles, exercises, breathing — **NEVER diagnoses**.
 - **Doctor anonymous reader**: views journals by anonymous ID, rates depression/stress/anxiety.
 - **Decline detection**: AI monitors 1-month patterns and gently asks "Would you like to meet a doctor?"
 - **Right to reject**: Patient can decline consultation — reason tracked but respected.
+- **FCHV proxy capture**: field worker can submit journals/check-ins on behalf of patients with no smartphone access.
 
 ### Counseling Services (MIT Health–Inspired)
 - **Individual therapy** sessions with licensed therapists.
@@ -93,10 +94,11 @@ Built for Nepal-US Hackathon 2026:
 - Calm mode for lower cognitive load (WHO-aligned)
 - Full mode for advanced analytics and clinician workflows
 - IAM: role-based navigation injection and screen rendering
+- FCHV role is intentionally simplified to show only FCHV-required workflows
 
 ### Backend
 - Node.js + Express (ES modules)
-- Google Gemini for chat/summary/sentiment
+- Azure OpenAI for chat/summary/sentiment
 - Local file stores for check-ins, escalations, and users
 - JWT auth with bcrypt password hashing
 - Role-based middleware (`requireAuth`, `requireRole`)
@@ -125,7 +127,7 @@ Nepal-US-Hackathon-2026/
 │       ├── index.js                ← Express app + all API routes
 │       ├── lib/
 │       │   ├── auth.js             ← JWT + RBAC middleware
-│       │   ├── gemini.js
+│       │   ├── gemini.js           ← Azure OpenAI integration helpers
 │       │   ├── insights.js
 │       │   ├── interventions.js
 │       │   ├── scoring.js
@@ -157,7 +159,7 @@ Nepal-US-Hackathon-2026/
 ### Prerequisites
 - Node.js 18+
 - npm 9+
-- Google Gemini API key (optional but recommended for AI quality)
+- Azure OpenAI endpoint, API key, and deployment name
 
 ### 1) Backend + Web
 
@@ -169,6 +171,13 @@ npm run dev
 ```
 
 Backend runs on `http://localhost:4000` and serves the web app from the same origin.
+
+LLM provider configuration in `.env`:
+- Azure OpenAI (primary LLM provider):
+  - `AZURE_OPENAI_ENDPOINT`
+  - `AZURE_OPENAI_API_KEY`
+  - `AZURE_OPENAI_DEPLOYMENT`
+  - `AZURE_OPENAI_API_VERSION` (default `2024-10-21`)
 
 ### Default Super Admin Credentials
 | Field | Value |
@@ -254,8 +263,15 @@ Then press:
 ### CHV (Community Health Volunteer)
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/chv/create-patient` | Create patient account (Mini Admin privilege) |
+| POST | `/api/chv/create-patient` | Create patient account (Mini Admin privilege, optional initial intake note) |
 | GET | `/api/chv/my-patients` | List patients created by this CHV |
+| PUT | `/api/chv/patients/:patientId` | Update managed patient profile + check-in schedule on behalf |
+| POST | `/api/chv/patients/:patientId/journals` | Submit journal entry on behalf of managed patient |
+| POST | `/api/chv/patients/:patientId/checkins` | Submit check-in on behalf of managed patient |
+
+Notes:
+- CHV/FCHV can manage only patients they created.
+- Super Admin can use the same CHV endpoints across all patients.
 
 ---
 
@@ -279,15 +295,26 @@ Then press:
 | Feature | 🛡️ Admin | 🩺 Doctor | 🧑 Patient | 👨‍👩‍👧 Guardian | 👩‍⚕️ CHV |
 |---------|----------|----------|-----------|-----------|---------|
 | IAM User Management | ✅ | ❌ | ❌ | ❌ | Patients only |
-| Journaling | ✅ | ❌ | ✅ (own) | ❌ | ❌ |
+| Journaling | ✅ | ❌ | ✅ (own) | ❌ | ✅ (on behalf of managed patients) |
 | Anonymous Journal Reader | ✅ | ✅ (by ID) | ❌ | ❌ | ❌ |
 | Doctor Assessments | ✅ | ✅ | ❌ | ❌ | ❌ |
 | AI Suggestions | ✅ | ❌ | ✅ (auto) | ❌ | ❌ |
 | Counseling Services | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Patient Records | ✅ | Anonymous only | Own only | Linked only | Created only |
+| Patient Records | ✅ | Anonymous only | Own only | Linked only | Created/managed only |
 | Emergency Escalation | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Screening (door-to-door) | ✅ | ❌ | ❌ | ❌ | ✅ |
 | Compliance & Audit | ✅ | View only | ❌ | ❌ | ❌ |
+
+### FCHV-Focused Web UX
+
+- FCHV sees only FCHV-relevant navigation and screens.
+- Hidden from FCHV UI: doctor dashboard/journal/care operations, patient self-service screens, guardian screens, and admin-only surfaces.
+- Exposed to FCHV UI:
+  - Register new patient
+  - View/select managed patients
+  - Update patient profile and check-in schedule on behalf
+  - Save proxy journal entry
+  - Submit proxy check-in
 
 ---
 
