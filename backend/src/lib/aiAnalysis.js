@@ -1,5 +1,5 @@
 /**
- * AegisSpeak — Background AI Analysis Engine
+ * Mental Compass — Background AI Analysis Engine
  *
  * CRITICAL RULES:
  * - NEVER diagnose the user
@@ -84,7 +84,7 @@ export async function analyzePatientJourney(entries, stats) {
     return buildFallbackAnalysis(stats);
   }
 
-  const prompt = `You are AegisSpeak's wellness companion AI. You are analyzing an ANONYMOUS patient's journal pattern to suggest supportive lifestyle habits.
+  const prompt = `You are Mental Compass's wellness companion AI. You are analyzing an ANONYMOUS patient's journal pattern to suggest supportive lifestyle habits.
 
 Patient data summary (completely anonymized):
 ${entrySummary}

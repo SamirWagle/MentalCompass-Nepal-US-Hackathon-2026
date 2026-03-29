@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AegisSpeak — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence. Free & confidential counseling for patients, doctors, guardians." />
-  <title>AegisSpeak · AI Mental Health Copilot</title>
+  <meta name="description" content="Mental Compass — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence. Free & confidential counseling for patients, doctors, guardians." />
+  <title>Mental Compass · AI Mental Health Copilot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  <link rel="icon" href="logo.png" />
 </head>
 <body>
 
@@ -27,9 +27,9 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <a class="sidebar-logo" href="#">
-        <div class="logo-icon">🛡️</div>
+        <div class="logo-icon"><img src="logo.png" alt="Mental Compass logo" class="brand-logo-img" /></div>
         <div>
-          <div class="logo-text">AegisSpeak</div>
+          <div class="logo-text">Mental Compass</div>
           <div class="logo-sub">Mental Health Companion</div>
         </div>
       </a>
@@ -49,9 +49,6 @@
       </a>
       <a class="nav-item" data-screen="checkin" href="#">
         <span class="nav-icon">◌</span><span class="nav-label">Daily Check-In</span>
-      </a>
-      <a class="nav-item" data-screen="career" href="#">
-        <span class="nav-icon">🧭</span><span class="nav-label">Career Compass</span>
       </a>
       <a class="nav-item" data-screen="support" href="#">
         <span class="nav-icon">🤝</span><span class="nav-label">Early Support</span>
@@ -119,7 +116,7 @@
         <div class="hero-top">
           <div>
             <div class="hero-greeting">Good afternoon</div>
-            <h1 class="hero-title">AegisSpeak Dashboard</h1>
+            <h1 class="hero-title">Mental Compass Dashboard</h1>
             <p class="hero-subtitle">Predictive, personalized, privacy-first care</p>
           </div>
           <div class="hero-live-badge"><span class="live-dot"></span> Edge Processing Active</div>
@@ -136,9 +133,9 @@
             <div class="stat-change down">↓ monitoring</div>
           </div>
           <div class="hero-stat">
-            <div class="stat-label">Companion XP</div>
+            <div class="stat-label">Journal Entries</div>
             <div class="stat-value success" id="dash-xp">18</div>
-            <div class="stat-change flat">🌱 Sprout</div>
+            <div class="stat-change flat">active</div>
           </div>
           <div class="hero-stat">
             <div class="stat-label">Risk Level</div>
@@ -146,31 +143,9 @@
             <div class="stat-change flat" id="dash-risk-score">—</div>
           </div>
         </div>
-      </div>
-
-      <!-- Gamified HUD -->
-      <div class="grid-3 gap-24 mb-24" id="gamified-hud">
-        <div class="glass-card">
-          <div class="card-title">XP Progress</div>
-          <div class="card-subtitle">Level up through check-ins & exercises</div>
-          <div class="xp-meter">
-            <div class="xp-level" id="xp-level">Level 3 · Sprout</div>
-            <div class="progress-bar">
-              <div class="progress-fill accent" id="xp-bar" style="width:18%"></div>
-            </div>
-            <div class="xp-points" id="xp-points">18 / 100 XP</div>
-            <div class="xp-note">Complete quests to earn bonus XP.</div>
-          </div>
-        </div>
-        <div class="glass-card">
-          <div class="card-title">Daily & Weekly Quests</div>
-          <div class="card-subtitle">Finish tasks to unlock badges</div>
-          <div id="quest-list"></div>
-        </div>
-        <div class="glass-card">
-          <div class="card-title">Leaderboard</div>
-          <div class="card-subtitle">Friendly competition · demo data</div>
-          <div id="leaderboard-list"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-danger" id="btn-emergency-home" type="button">🚨 Emergency SOS</button>
+          <span style="font-size:12px;color:var(--text-muted);align-self:center;">Urgent help request to care team</span>
         </div>
       </div>
 
@@ -227,12 +202,12 @@
           <div class="intervention-title">4-4-4 Breathing</div>
           <div class="intervention-desc">Guided 60-second exercise</div>
         </div>
-        <div class="glass-card intervention-card" onclick="showToast('🖐 Name 5 see · 4 touch · 3 hear · 2 smell · 1 taste')">
+        <div class="glass-card intervention-card" onclick="openGroundingModal()">
           <div class="intervention-icon">🖐️</div>
           <div class="intervention-title">5-4-3-2-1 Grounding</div>
           <div class="intervention-desc">Sensory awareness exercise</div>
         </div>
-        <div class="glass-card intervention-card" onclick="showToast('🧠 Write worry → Evidence For → Evidence Against → Balanced Thought')">
+        <div class="glass-card intervention-card" onclick="openCbtModal()">
           <div class="intervention-icon">🧠</div>
           <div class="intervention-title">CBT Thought Reframe</div>
           <div class="intervention-desc">Cognitive restructuring</div>
@@ -250,15 +225,11 @@
           </div>
         </div>
         <div class="glass-card">
-          <div class="card-title">Emotional Companion</div>
-          <div class="card-subtitle">AI avatar that evolves with your resilience</div>
-          <div class="avatar-display">
-            <div class="avatar-emoji" id="avatar-emoji">🌱</div>
-            <div class="avatar-stage" id="avatar-stage">Sprout</div>
-            <div class="avatar-xp-text">18 / 100 XP</div>
-            <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" id="avatar-xp-bar" style="width:18%"></div></div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Earn XP by completing check-ins & exercises</div>
-          </div>
+          <div class="card-title">Support Snapshot</div>
+          <div class="card-subtitle">Practical next actions for your day</div>
+          <div class="signal-item"><span class="signal-name">🧩 1 grounding session + 1 short journal note recommended now.</span></div>
+          <div class="signal-item"><span class="signal-name">💬 If stress remains high after 15 minutes, request a care-team follow-up.</span></div>
+          <div class="signal-item"><span class="signal-name">🌙 Keep tonight's wind-down window protected for better sleep recovery.</span></div>
         </div>
       </div>
     </div>
@@ -266,7 +237,7 @@
     <!-- ═══ COPILOT CHAT ═══ -->
     <div class="screen" id="screen-copilot">
       <div class="section-heading">
-        <div><div class="section-title">AI Copilot</div><div class="section-subtitle">Memory-aware CBT companion · Powered by Gemini</div></div>
+        <div><div class="section-title">AI Copilot</div><div class="section-subtitle">Memory-aware CBT companion · Powered by Azure OpenAI</div></div>
       </div>
       <div class="chip-row">
         <span class="chip active" data-personality="calm">🧘 Calm</span>
@@ -285,7 +256,7 @@
         <div class="chat-container">
           <div class="chat-messages" id="chat-messages">
             <div class="chat-bubble bot">
-              Hello 👋 I'm your AegisSpeak copilot. Tell me how you're feeling right now, and I'll adapt to your emotional context over time.
+              Hello 👋 I'm your Mental Compass copilot. Tell me how you're feeling right now, and I'll adapt to your emotional context over time.
               <div class="chat-bubble-meta">Copilot · Just now</div>
             </div>
           </div>
@@ -316,7 +287,7 @@
           <div class="checkin-call-note">We respect your consent. Skipping a check-in keeps your streak intact and logs an anonymous reason.</div>
         </div>
         <div class="checkin-call-actions">
-          <button class="btn btn-outline" id="btn-open-checkin-call">▶ Start Call Demo</button>
+          <button class="btn btn-outline" id="btn-open-checkin-call">▶ Start Check-In Call</button>
           <button class="btn btn-ghost" id="btn-decline-checkin-quick">⏭ Skip Today</button>
         </div>
       </div>
@@ -884,7 +855,7 @@
             <div class="shredder-particles" id="shredder-particles"></div>
           </div>
           <div class="shredder-status" id="shredder-status">All raw audio & sensitive data has been securely purged</div>
-          <button class="btn btn-outline" id="btn-shred-demo" style="margin-top:16px;">▶ Run Shred Demonstration</button>
+          <button class="btn btn-outline" id="btn-shred-demo" style="margin-top:16px;">▶ Run Secure Shred</button>
         </div>
       </div>
       <div class="glass-card mb-24">
@@ -992,13 +963,13 @@
 </div>
 
 <!-- ═══ BREATHING MODAL ═══ -->
-<div id="breathing-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-content">
+<div id="breathing-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
     <div class="modal-header">
-      <div class="card-title">🫁 Guided Breathing Exercise</div>
+      <div class="card-title">🫁 4-4-4 Guided Breathing</div>
       <button class="modal-close" onclick="closeBreathingModal()">✕</button>
     </div>
-    <div style="text-align:center;padding:20px;">
+    <div class="intervention-body" style="text-align:center;padding:20px;">
       <div class="breathing-guided-circle" id="breathing-guided">
         <span id="breathing-phase">Ready</span>
       </div>
@@ -1007,6 +978,68 @@
       <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
         <button class="btn btn-primary" id="btn-breathing-start">▶ Start Exercise</button>
         <button class="btn btn-ghost" id="btn-breathing-stop" style="display:none;">⏹ Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GROUNDING MODAL ═══ -->
+<div id="grounding-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
+    <div class="modal-header">
+      <div class="card-title">🖐️ 5-4-3-2-1 Grounding</div>
+      <button class="modal-close" onclick="closeGroundingModal()">✕</button>
+    </div>
+    <div class="intervention-body">
+      <div class="intervention-step-chip" id="grounding-step-chip">Step 1 of 5</div>
+      <div class="intervention-prompt" id="grounding-prompt">Name 5 things you can see around you.</div>
+      <textarea id="grounding-input" class="intervention-input" rows="5" placeholder="Type what you notice..."></textarea>
+      <div class="intervention-progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="grounding-progress" style="width:20%"></div></div>
+      </div>
+      <div class="intervention-actions">
+        <button class="btn btn-primary" id="btn-grounding-start">▶ Start Grounding</button>
+        <button class="btn btn-primary" id="btn-grounding-next" style="display:none;">Next Step</button>
+        <button class="btn btn-ghost" id="btn-grounding-stop" onclick="closeGroundingModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CBT REFRAME MODAL ═══ -->
+<div id="cbt-modal" class="modal-overlay intervention-fullscreen" style="display:none;">
+  <div class="modal-content intervention-panel">
+    <div class="modal-header">
+      <div class="card-title">🧠 CBT Thought Reframe</div>
+      <button class="modal-close" onclick="closeCbtModal()">✕</button>
+    </div>
+    <div class="intervention-body">
+      <div class="intervention-prompt">Use this structure to shift from automatic worry to a balanced response.</div>
+      <div class="grid-2 gap-24" style="width:100%;">
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Worry Thought</div>
+          <textarea id="cbt-worry" class="intervention-input" rows="4" placeholder="What thought is troubling you right now?"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Evidence For</div>
+          <textarea id="cbt-for" class="intervention-input" rows="4" placeholder="Facts that seem to support this thought"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Evidence Against</div>
+          <textarea id="cbt-against" class="intervention-input" rows="4" placeholder="Facts that challenge this thought"></textarea>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px;">Balanced Reframe</div>
+          <textarea id="cbt-balanced" class="intervention-input" rows="4" placeholder="A kinder, more realistic thought"></textarea>
+        </div>
+      </div>
+      <div id="cbt-result" class="plan-box" style="display:none;width:100%;">
+        <div class="plan-label">Your Reframed Thought</div>
+        <div class="plan-text" id="cbt-result-text"></div>
+      </div>
+      <div class="intervention-actions">
+        <button class="btn btn-primary" id="btn-cbt-submit">✅ Complete Reframe</button>
+        <button class="btn btn-ghost" onclick="closeCbtModal()">Close</button>
       </div>
     </div>
   </div>

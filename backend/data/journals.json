@@ -83,5 +83,164 @@
     "createdAt": "2026-03-29T07:23:21.627Z",
     "declineNote": null,
     "checkinDecline": null
+  },
+  {
+    "id": "ae5a1d00-a507-4562-aa9f-e37df1990ebe",
+    "journalId": "JE-MNBIGFWY-O8R6",
+    "userId": "300e94b9-d445-48b8-8340-9092ce6833a6",
+    "anonymousId": "JRN-AQ9U",
+    "type": "text",
+    "content": "yesto yesto bhayo",
+    "audioUrl": null,
+    "audioMeta": null,
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": null,
+    "llmAnalysis": null,
+    "aiSummary": "Initial field intake submitted by FCHV.",
+    "checklist": [
+      "fchv_initial_intake"
+    ],
+    "mcqAnswers": {
+      "source": "chv_registration"
+    },
+    "aiSuggestions": [],
+    "doctorAssessments": [
+      {
+        "id": "1aa8257b-9597-4e54-9c66-05011f22fcea",
+        "doctorId": "e3cdbb64-78d7-471f-9f15-9ab114fad228",
+        "doctorType": "psychiatrist",
+        "depressionScore": 5,
+        "stressLevel": 6,
+        "anxietyLevel": 5,
+        "clinicalNotes": "selsfklgfgfdgd",
+        "recommendsConsultation": true,
+        "feedbackToPatient": "selsfklgfgfdgd",
+        "severity": "moderate",
+        "requiresImmediateCall": false,
+        "createdAt": "2026-03-29T08:43:36.218Z"
+      }
+    ],
+    "createdAt": "2026-03-29T08:42:11.986Z",
+    "declineNote": null,
+    "checkinDecline": null
+  },
+  {
+    "id": "36f6e49d-ce9b-418e-88f5-590fe8d0b68b",
+    "journalId": "JE-MNBIO6BR-0KO8",
+    "userId": "558b621e-20d4-43c1-8b54-4b79ae25bb67",
+    "anonymousId": "JRN-TCV5",
+    "type": "voice",
+    "content": "",
+    "audioUrl": "uploads/recorded-journal-2026-03-29T08-48-10-702Z.webm",
+    "audioMeta": {
+      "fileName": "recorded-journal-2026-03-29T08-48-10-702Z.webm",
+      "size": 96896,
+      "mimeType": "audio/webm;codecs=opus",
+      "durationSec": 16,
+      "capturedAt": "2026-03-29T08:48:10.702Z"
+    },
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": {
+      "heartRate": 72,
+      "sleepHours": 7,
+      "steps": 6500,
+      "stressLevel": 5,
+      "recordedAt": "2026-03-29T09:38:10.224Z",
+      "source": "manual"
+    },
+    "wearablePhi": {
+      "encrypted": "AGMpSLD8OQUppPAhly5DwyG1XJVh+tWtkR+trQQh3GChkIX3Cd8q91IHvDRKlVZMBDcvoEpD/Xjg38RgAWBvI7sOo15MWk176yyrDz9wy28IV9b6AVe2RRkXLAg0ga0yhc8n1MGAEAtj52sCQDLDlAuD/OWhFQ==",
+      "iv": "1Kp3uF8maxXuGvml",
+      "authTag": "m2nGCHuZfstAJ2WkWUTYiA=="
+    },
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 0,
+      "concernIndicators": 0,
+      "wordCount": 9,
+      "analyzedAt": "2026-03-29T08:48:10.705Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [
+          "neutral",
+          "medium",
+          "audio",
+          "journal"
+        ],
+        "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [
+        "neutral",
+        "medium",
+        "audio",
+        "journal"
+      ],
+      "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+    },
+    "aiSummary": "Emotion trend: neutral. keywords: neutral, medium, audio, journal. micro-step: Practice mindful breathing for 2 minutes to maintain your balanced mood.",
+    "checklist": [],
+    "mcqAnswers": {
+      "mood": "neutral",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 0,
+        "concernIndicators": 0,
+        "wordCount": 9,
+        "analyzedAt": "2026-03-29T08:48:10.705Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [
+            "neutral",
+            "medium",
+            "audio",
+            "journal"
+          ],
+          "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+        }
+      },
+      "suggestions": [
+        {
+          "title": "5-Minute Calm Down",
+          "desc": "Slow, deep breaths with gentle counting",
+          "icon": "🌬️"
+        },
+        {
+          "title": "Dance for 3 Minutes",
+          "desc": "Put on your favorite song and move your body",
+          "icon": "💃"
+        },
+        {
+          "title": "Sleep Hygiene Basics",
+          "desc": "Simple tips for better rest tonight",
+          "icon": "😴"
+        },
+        {
+          "title": "Lo-Fi Study Beats",
+          "desc": "Gentle background music for focus and calm",
+          "icon": "🎧"
+        }
+      ],
+      "generatedAt": "2026-03-29T08:48:12.809Z",
+      "message": "Thank you for journaling today. Every entry is a step forward. 🌱"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T08:48:12.807Z",
+    "declineNote": null,
+    "checkinDecline": null
   }
 ]

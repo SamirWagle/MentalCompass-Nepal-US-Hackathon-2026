@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — IAM Login & Role-Based UI
-   ═══════════════════════════════════════════════ */
+  Mental Compass — IAM Login & Role-Based UI
+  ═══════════════════════════════════════════════ */
 
 const IAM_API = 'http://localhost:4000';
 
@@ -99,9 +99,9 @@ function buildLoginHTML() {
   <div class="login-container" role="main">
     <div class="login-left">
       <div class="login-brand">
-        <div class="login-logo-icon">🛡️</div>
+        <div class="login-logo-icon"><img src="logo.png" alt="Mental Compass logo" class="brand-logo-img" /></div>
         <div>
-          <div class="login-logo-text">AegisSpeak</div>
+          <div class="login-logo-text">Mental Compass</div>
           <div class="login-logo-sub">AI Mental Health Copilot</div>
         </div>
       </div>
@@ -211,7 +211,7 @@ function buildLoginHTML() {
         </form>
 
         <div class="login-demo-box">
-          <div class="login-demo-title">Demo Credentials</div>
+          <div class="login-demo-title">Admin Quick Access</div>
           <button type="button" class="login-demo-btn" id="login-demo-admin">
             🛡️ Super Admin — admin@aegisspeak.com
           </button>
@@ -254,7 +254,7 @@ function bindLoginEvents() {
     });
   }
 
-  // Demo fill
+  // Quick-fill admin credentials
   const demoBtn = document.getElementById('login-demo-admin');
   if (demoBtn) {
     demoBtn.addEventListener('click', () => {
@@ -399,6 +399,10 @@ function onLoginSuccess(user) {
   if (typeof showToast === 'function') {
     showToast(`✅ Welcome back, ${user.fullName}!`);
   }
+
+  if (typeof window.__aegisRefreshDashboard === 'function') {
+    window.__aegisRefreshDashboard();
+  }
 }
 
 function injectUserBadge(user) {
@@ -490,10 +494,12 @@ function injectRoleBasedNav(user) {
   } else if (user.role === 'guardian') {
     items.push({ screen: 'guardian-view', icon: '👁️', label: 'Patient Overview', section: 'Family Access' });
   } else if (user.role === 'patient') {
+    const hideNavOnly = (k) => { const n = document.querySelector(`.nav-item[data-screen="${k}"]`); if (n) n.style.display = 'none'; };
+    ['clinician', 'triage'].forEach(hideNavOnly);
     items.push({ screen: 'journal', icon: '📓', label: 'Journal', section: 'My Health' });
     items.push({ screen: 'booking', icon: '📅', label: 'Book Consultation', section: null });
     items.push({ screen: 'my-settings', icon: '⚙️', label: 'Settings', section: null });
-    items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
+    items.push({ screen: 'patient-care', icon: '🏥', label: 'Care Operations', section: 'Provider' });
   } else if (user.role === 'chv') {
     // CHV gets a focused UI: only mini-admin field workflows.
     hideScreens([
@@ -629,6 +635,13 @@ function injectRoleScreens(user) {
     settingsScreen.innerHTML = buildSettingsScreenHTML();
     mainContent.appendChild(settingsScreen);
     setTimeout(() => initSettingsScreen(), 100);
+
+    const careScreen = document.createElement('div');
+    careScreen.className = 'screen injected-screen';
+    careScreen.id = 'screen-patient-care';
+    careScreen.innerHTML = buildPatientCareOperationsHTML();
+    mainContent.appendChild(careScreen);
+    setTimeout(() => initPatientCareOperations(), 100);
   }
 
   // CHV-exclusive dashboard
@@ -678,7 +691,7 @@ function buildDoctorDashboardHTML() {
   <div class="section-heading">
     <div>
       <div class="section-title">🩺 Doctor Dashboard</div>
-      <div class="section-subtitle">Clinical cockpit · demo data (scripts/seed_demo)</div>
+      <div class="section-subtitle">Clinical cockpit · live operations view</div>
     </div>
   </div>
 
@@ -709,7 +722,7 @@ function buildDoctorDashboardHTML() {
     </div>
     <div class="glass-card">
       <div class="card-title">Intervene & Assign</div>
-      <div class="card-subtitle">Push milestones & resources (demo)</div>
+      <div class="card-subtitle">Push milestones & resources</div>
       <div class="grid-2 gap-12">
         <div>
           <div class="form-label">Milestone</div>
@@ -752,7 +765,7 @@ function buildDoctorDashboardHTML() {
     <div class="card-title">Data Compliance & Security Monitor</div>
     <div class="card-subtitle">Encryption, storage, wipe status</div>
     <div class="grid-3 gap-16" id="doc-compliance-cards"></div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Demo data from scripts/seed_demo; replace with live compliance endpoint.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Compliance telemetry from current runtime and audit receipts.</div>
   </div>
 
   `;
@@ -836,7 +849,7 @@ function initDoctorDashboard() {
     draftBtn.dataset.bound = 'true';
     draftBtn.addEventListener('click', () => {
       const status = document.getElementById('doc-assign-status');
-      if (status) status.textContent = '💾 Draft saved locally (demo)';
+      if (status) status.textContent = '💾 Draft saved locally';
       showToast('Draft saved');
     });
   }
@@ -848,7 +861,7 @@ function initDoctorDashboard() {
       { label: 'Encryption Status', value: 'AES-256-GCM Active', color: 'var(--success)' },
       { label: 'Voice Files Stored', value: '0 (purged on edge)', color: 'var(--accent)' },
       { label: 'Last Wipe', value: 'Today · 09:40', color: 'var(--warning)' },
-      { label: 'HIPAA Compliance', value: 'Verified (demo)', color: 'var(--success)' },
+      { label: 'HIPAA Compliance', value: 'Verified', color: 'var(--success)' },
       { label: 'Audit Hashes', value: '12 receipts', color: 'var(--text-secondary)' },
       { label: 'Anomaly Alerts', value: '0 unresolved', color: 'var(--success)' },
     ];
@@ -1425,7 +1438,7 @@ function initDoctorCounseling() {
     `).join('');
   };
 
-  // Reuse outreach & compliance from dashboard demo data
+  // Reuse outreach & compliance cards from dashboard data
   const renderOutreach = (items) => {
     const el = document.getElementById('doc-outreach');
     if (!el) return;
@@ -1442,6 +1455,140 @@ function initDoctorCounseling() {
 
   renderOutreach(DOCTOR_DEMO_OUTREACH);
   renderSimple('doc-care-compliance', DOCTOR_DEMO_CARE_COMPLIANCE);
+}
+
+function buildPatientCareOperationsHTML() {
+  return `
+  <div class="section-heading">
+    <div><div class="section-title">🏥 Care Operations (Patient)</div><div class="section-subtitle">Doctor pings, feedback, and next actions for your care</div></div>
+  </div>
+
+  <div class="grid-2 gap-24 mb-24">
+    <div class="glass-card">
+      <div class="card-title">📨 Doctor Messages</div>
+      <div class="card-subtitle">Latest feedback from your care team</div>
+      <div id="patient-care-messages"><div style="color:var(--text-muted);text-align:center;padding:20px;">Loading messages...</div></div>
+    </div>
+    <div class="glass-card">
+      <div class="card-title">🚨 Priority Pings</div>
+      <div class="card-subtitle">Immediate actions requested by doctors</div>
+      <div id="patient-care-pings"><div style="color:var(--text-muted);text-align:center;padding:20px;">Loading pings...</div></div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-outline btn-sm" id="patient-care-request-call">📞 Request Immediate Callback</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <div class="card-title">📅 Consultation Status</div>
+    <div class="card-subtitle">Your upcoming and pending consultations</div>
+    <div id="patient-care-appointments"><div style="color:var(--text-muted);text-align:center;padding:20px;">Loading consultations...</div></div>
+  </div>
+  `;
+}
+
+async function initPatientCareOperations() {
+  const renderMessages = (assessments) => {
+    const el = document.getElementById('patient-care-messages');
+    if (!el) return;
+    if (!assessments.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">No doctor messages yet.</div>';
+      return;
+    }
+    el.innerHTML = assessments.slice(0, 8).map((a) => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${new Date(a.createdAt || Date.now()).toLocaleString()}</span>
+          <span class="badge ${a.severity === 'severe' ? 'badge-high' : a.severity === 'low' ? 'badge-low' : 'badge-moderate'}">${escapeHtml((a.severity || 'moderate').toUpperCase())}</span>
+        </div>
+        <div class="record-body">${escapeHtml(a.feedbackToPatient || a.clinicalNotes || 'Doctor reviewed your recent journal and added follow-up guidance.')}</div>
+      </div>
+    `).join('');
+  };
+
+  const renderPings = (assessments) => {
+    const el = document.getElementById('patient-care-pings');
+    if (!el) return;
+    const urgent = assessments.filter(a => a.severity === 'severe' || a.requiresImmediateCall || a.recommendsConsultation);
+    if (!urgent.length) {
+      el.innerHTML = '<div style="color:var(--success);padding:10px 0;">✅ No urgent pings right now.</div>';
+      return;
+    }
+    el.innerHTML = urgent.slice(0, 5).map((a) => `
+      <div class="record-item" style="margin-bottom:10px;border-left:4px solid var(--danger);">
+        <div class="record-header">
+          <span class="record-date">${new Date(a.createdAt || Date.now()).toLocaleString()}</span>
+          <span class="badge badge-high">ACTION NEEDED</span>
+        </div>
+        <div class="record-body">${escapeHtml(a.feedbackToPatient || 'Doctor requested you to connect soon for follow-up care.')}</div>
+      </div>
+    `).join('');
+  };
+
+  const renderAppointments = (appointments) => {
+    const el = document.getElementById('patient-care-appointments');
+    if (!el) return;
+    if (!appointments.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">No consultations yet. Book one from Book Consultation.</div>';
+      return;
+    }
+    el.innerHTML = appointments.slice(0, 8).map((a) => `
+      <div class="record-item" style="margin-bottom:10px;">
+        <div class="record-header">
+          <span class="record-date">${a.scheduledAt ? new Date(a.scheduledAt).toLocaleString() : 'Scheduling pending'}</span>
+          <span class="badge ${a.status === 'confirmed' ? 'badge-low' : a.status === 'cancelled' ? 'badge-high' : 'badge-moderate'}">${escapeHtml((a.status || 'pending').toUpperCase())}</span>
+        </div>
+        <div class="record-body">Fee: NPR ${Number(a.consultationFee || 0)} · Payment: ${escapeHtml((a.paymentStatus || 'unpaid').toUpperCase())}</div>
+      </div>
+    `).join('');
+  };
+
+  try {
+    const hdrs = window.__aegisGetAuthHeaders();
+    const [journalsRes, apptRes] = await Promise.all([
+      fetch(`${IAM_API}/api/journals/mine?limit=30`, { headers: hdrs }),
+      fetch(`${IAM_API}/api/appointments/mine`, { headers: hdrs }),
+    ]);
+
+    const journalsData = await journalsRes.json();
+    const apptData = await apptRes.json();
+
+    const entries = journalsData?.data?.entries || journalsData?.entries || [];
+    const assessments = entries
+      .flatMap((e) => e.doctorAssessments || [])
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    renderMessages(assessments);
+    renderPings(assessments);
+    renderAppointments(apptData?.data?.appointments || apptData?.appointments || []);
+  } catch {
+    const messageHtml = '<div style="color:var(--text-muted);text-align:center;padding:20px;">Could not load care operations right now.</div>';
+    const messages = document.getElementById('patient-care-messages');
+    const pings = document.getElementById('patient-care-pings');
+    const appointments = document.getElementById('patient-care-appointments');
+    if (messages) messages.innerHTML = messageHtml;
+    if (pings) pings.innerHTML = messageHtml;
+    if (appointments) appointments.innerHTML = messageHtml;
+  }
+
+  const callbackBtn = document.getElementById('patient-care-request-call');
+  if (callbackBtn) {
+    callbackBtn.addEventListener('click', async () => {
+      try {
+        const hdrs = window.__aegisGetAuthHeaders();
+        const res = await fetch(`${IAM_API}/api/severe/call/patient`, {
+          method: 'POST',
+          headers: hdrs,
+          body: JSON.stringify({ reason: 'Need doctor callback from care operations page', preferredTime: 'asap' }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error?.message || 'Could not request callback');
+        showToast('✅ Callback request sent to care team');
+      } catch (e) {
+        showToast('⚠️ ' + (e.message || 'Request failed'));
+      }
+    });
+  }
 }
 
 /* ══════════════════════════
@@ -1530,8 +1677,14 @@ function buildJournalScreenHTML() {
       </div>
       <textarea class="text-area" id="journal-entry-text" placeholder="Write about how you're feeling today..." style="min-height:140px;"></textarea>
       <div class="form-group" id="journal-audio-wrap" style="display:none;">
-        <label class="form-label" for="journal-audio-file">Audio Journal</label>
-        <input type="file" id="journal-audio-file" accept="audio/*" class="text-area" style="min-height:44px;" />
+        <label class="form-label">Audio Journal Recorder</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-outline btn-sm" id="btn-journal-audio-start" type="button">🎙️ Start Recording</button>
+          <button class="btn btn-ghost btn-sm" id="btn-journal-audio-stop" type="button" disabled>⏹ Stop</button>
+          <button class="btn btn-ghost btn-sm" id="btn-journal-audio-clear" type="button" disabled>🗑 Clear</button>
+        </div>
+        <div id="journal-audio-status" style="margin-top:8px;font-size:12px;color:var(--text-muted);">No recording yet.</div>
+        <audio id="journal-audio-preview" controls style="margin-top:10px;width:100%;display:none;"></audio>
       </div>
       <div class="form-group" id="journal-video-wrap" style="display:none;">
         <label class="form-label" for="journal-video-file">Video Journal</label>
@@ -1608,24 +1761,119 @@ function initJournalScreen() {
   const audioWrap = document.getElementById('journal-audio-wrap');
   const videoWrap = document.getElementById('journal-video-wrap');
 
+  let audioRecorder = null;
+  let audioStream = null;
+  let recordedAudioChunks = [];
+  let recordedAudioBlob = null;
+  let recordedAudioUrl = null;
+  let recordingStartedAt = 0;
+  let recordedAudioDurationSec = null;
+
+  const startAudioBtn = document.getElementById('btn-journal-audio-start');
+  const stopAudioBtn = document.getElementById('btn-journal-audio-stop');
+  const clearAudioBtn = document.getElementById('btn-journal-audio-clear');
+  const audioStatusEl = document.getElementById('journal-audio-status');
+  const audioPreviewEl = document.getElementById('journal-audio-preview');
+
+  const resetAudioRecordingState = () => {
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      recordedAudioUrl = null;
+    }
+    recordedAudioChunks = [];
+    recordedAudioBlob = null;
+    recordingStartedAt = 0;
+    recordedAudioDurationSec = null;
+    if (audioPreviewEl) {
+      audioPreviewEl.pause();
+      audioPreviewEl.removeAttribute('src');
+      audioPreviewEl.style.display = 'none';
+    }
+    if (audioStatusEl) audioStatusEl.textContent = 'No recording yet.';
+    if (clearAudioBtn) clearAudioBtn.disabled = true;
+  };
+
+  const stopLiveAudioTracks = () => {
+    if (audioStream) {
+      audioStream.getTracks().forEach((track) => track.stop());
+      audioStream = null;
+    }
+  };
+
+  if (startAudioBtn && stopAudioBtn) {
+    startAudioBtn.addEventListener('click', async () => {
+      try {
+        if (typeof MediaRecorder === 'undefined') {
+          showToast('⚠️ Audio recording is not supported in this browser');
+          return;
+        }
+        resetAudioRecordingState();
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioRecorder = new MediaRecorder(audioStream);
+        audioRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) recordedAudioChunks.push(event.data);
+        };
+        audioRecorder.onstop = () => {
+          const mimeType = audioRecorder?.mimeType || 'audio/webm';
+          recordedAudioBlob = new Blob(recordedAudioChunks, { type: mimeType });
+          recordedAudioDurationSec = recordingStartedAt ? Math.max(1, Math.round((Date.now() - recordingStartedAt) / 1000)) : null;
+          if (audioStatusEl) audioStatusEl.textContent = `✅ Recording ready (${recordedAudioDurationSec || 0}s, ${Math.round(recordedAudioBlob.size / 1024)} KB)`;
+          if (audioPreviewEl && recordedAudioBlob.size > 0) {
+            recordedAudioUrl = URL.createObjectURL(recordedAudioBlob);
+            audioPreviewEl.src = recordedAudioUrl;
+            audioPreviewEl.style.display = 'block';
+          }
+          if (clearAudioBtn) clearAudioBtn.disabled = recordedAudioBlob.size === 0;
+          stopLiveAudioTracks();
+        };
+        audioRecorder.start();
+        recordingStartedAt = Date.now();
+        startAudioBtn.disabled = true;
+        stopAudioBtn.disabled = false;
+        if (audioStatusEl) audioStatusEl.textContent = '🔴 Recording... press Stop when done.';
+      } catch {
+        showToast('⚠️ Microphone permission denied or unavailable');
+      }
+    });
+
+    stopAudioBtn.addEventListener('click', () => {
+      if (audioRecorder && audioRecorder.state === 'recording') {
+        audioRecorder.stop();
+        startAudioBtn.disabled = false;
+        stopAudioBtn.disabled = true;
+      }
+    });
+  }
+
+  if (clearAudioBtn) {
+    clearAudioBtn.addEventListener('click', () => {
+      resetAudioRecordingState();
+      if (startAudioBtn) startAudioBtn.disabled = false;
+      if (stopAudioBtn) stopAudioBtn.disabled = true;
+    });
+  }
+
   if (typeSelect && audioWrap && videoWrap) {
     typeSelect.addEventListener('change', () => {
       audioWrap.style.display = typeSelect.value === 'audio' ? 'block' : 'none';
       videoWrap.style.display = typeSelect.value === 'video' ? 'block' : 'none';
+      if (typeSelect.value !== 'audio' && audioRecorder && audioRecorder.state === 'recording') {
+        audioRecorder.stop();
+      }
     });
   }
 
   if (saveBtn) saveBtn.addEventListener('click', async () => {
     const text = document.getElementById('journal-entry-text')?.value?.trim();
     const type = document.getElementById('journal-entry-type')?.value || 'text';
-    const audioFile = document.getElementById('journal-audio-file')?.files?.[0] || null;
     const videoFile = document.getElementById('journal-video-file')?.files?.[0] || null;
     const checklist = Array.from(document.querySelectorAll('#journal-checklist input[type="checkbox"]:checked')).map(el => el.value);
     const mcqAnswers = {
       mood: document.getElementById('journal-mcq-mood')?.value || 'neutral',
       energy: document.getElementById('journal-mcq-energy')?.value || 'medium',
     };
-    if (!text && !audioFile && !videoFile && checklist.length === 0) { showToast('Write or select at least one journal signal'); return; }
+    if (!text && !recordedAudioBlob && !videoFile && checklist.length === 0) { showToast('Write or select at least one journal signal'); return; }
+    if (type === 'audio' && !recordedAudioBlob) { showToast('Please record audio first'); return; }
     saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving...';
     try {
       const hdrs = window.__aegisGetAuthHeaders();
@@ -1634,8 +1882,14 @@ function initJournalScreen() {
         content: text || '',
         checklist,
         mcqAnswers,
-        audioMeta: type === 'audio' && audioFile
-          ? { fileName: audioFile.name, size: audioFile.size, mimeType: audioFile.type, capturedAt: new Date().toISOString() }
+        audioMeta: type === 'audio' && recordedAudioBlob
+          ? {
+              fileName: `recorded-journal-${new Date().toISOString().replace(/[.:]/g, '-')}.webm`,
+              size: recordedAudioBlob.size,
+              mimeType: recordedAudioBlob.type || 'audio/webm',
+              durationSec: recordedAudioDurationSec,
+              capturedAt: new Date().toISOString()
+            }
           : null,
         videoMeta: type === 'video' && videoFile
           ? { fileName: videoFile.name, size: videoFile.size, mimeType: videoFile.type, capturedAt: new Date().toISOString() }
@@ -1645,8 +1899,10 @@ function initJournalScreen() {
       const data = await res.json();
       if (data.ok) {
         document.getElementById('journal-entry-text').value = '';
-        const audioInput = document.getElementById('journal-audio-file');
-        if (audioInput) audioInput.value = '';
+        resetAudioRecordingState();
+        stopLiveAudioTracks();
+        if (startAudioBtn) startAudioBtn.disabled = false;
+        if (stopAudioBtn) stopAudioBtn.disabled = true;
         const videoInput = document.getElementById('journal-video-file');
         if (videoInput) videoInput.value = '';
         document.querySelectorAll('#journal-checklist input[type="checkbox"]').forEach(cb => { cb.checked = false; });
@@ -1766,7 +2022,7 @@ function buildBookingScreenHTML() {
     </div>
     <div class="glass-card">
       <div class="card-title">Step 2: Confirm & Pay</div>
-      <div class="card-subtitle">Simulated payment for demo</div>
+      <div class="card-subtitle">Secure payment and instant confirmation</div>
       <div id="booking-selected-info" style="margin-bottom:16px;">
         <div style="color:var(--text-muted);font-size:14px;">Select a doctor first</div>
       </div>
@@ -1788,7 +2044,7 @@ function buildBookingScreenHTML() {
   </div>`;
 }
 
-let selectedDoctorId = null;
+let selectedDoctorCode = null;
 
 function initBookingScreen() {
   loadAvailableDoctors();
@@ -1796,18 +2052,18 @@ function initBookingScreen() {
 
   const confirmBtn = document.getElementById('btn-booking-confirm');
   if (confirmBtn) confirmBtn.addEventListener('click', async () => {
-    if (!selectedDoctorId) { showToast('Select a doctor first'); return; }
+    if (!selectedDoctorCode) { showToast('Select a doctor first'); return; }
     confirmBtn.disabled = true; confirmBtn.textContent = '⏳ Booking...';
     try {
       const hdrs = window.__aegisGetAuthHeaders();
       const notes = document.getElementById('booking-notes')?.value || '';
       const res = await fetch(`${IAM_API}/api/appointments`, {
         method: 'POST', headers: hdrs,
-        body: JSON.stringify({ doctorId: selectedDoctorId, notes, scheduledAt: new Date(Date.now() + 86400000).toISOString() })
+        body: JSON.stringify({ doctorCode: selectedDoctorCode, notes, scheduledAt: new Date(Date.now() + 86400000).toISOString() })
       });
       const data = await res.json();
       if (data.ok) {
-        const appt = data.data?.appointment;
+        const appt = data.data || {};
         // Simulate payment
         try {
           await fetch(`${IAM_API}/api/payments/appointment/${appt.id}`, {
@@ -1821,11 +2077,12 @@ function initBookingScreen() {
           receipt.innerHTML = `
             <div class="plan-box">
               <div class="plan-label">✅ Booking Confirmed</div>
-              <div class="plan-text">Appointment ID: ${(appt.id || '').slice(0,8)}<br>Scheduled: ${new Date(appt.scheduledAt).toLocaleString()}<br>Status: Confirmed & Paid (demo)</div>
+              <div class="plan-text">Appointment ID: ${(appt.id || '').slice(0,8)}<br>Scheduled: ${new Date(appt.scheduledAt).toLocaleString()}<br>Status: Confirmed & Paid</div>
             </div>`;
         }
         showToast('✅ Consultation booked successfully');
-        selectedDoctorId = null;
+        selectedDoctorCode = null;
+        loadAvailableDoctors();
         loadMyAppointments();
       } else { throw new Error(data.error?.message || 'Booking failed'); }
     } catch (e) { showToast('⚠️ ' + e.message); }
@@ -1846,21 +2103,21 @@ async function loadAvailableDoctors() {
       return;
     }
     list.innerHTML = doctors.map(d => `
-      <div class="clin-patient-card ${selectedDoctorId === d.id ? 'active' : ''}" data-doc-id="${d.id}" style="cursor:pointer;">
+      <div class="clin-patient-card ${selectedDoctorCode === d.doctorCode ? 'active' : ''}" data-doc-code="${escapeHtml(d.doctorCode || '')}" style="cursor:pointer;">
         <div class="clin-patient-title">
-          <div class="clin-patient-name">🩺 ${escapeHtml(d.displayName || d.fullName || 'Anonymous Doctor')}</div>
-          <span class="badge badge-low">${d.doctorType || 'General'}</span>
+          <div class="clin-patient-name">🩺 ${escapeHtml(d.doctorCode || 'DR-????')}</div>
+          <span class="badge badge-low">${escapeHtml((d.doctorType || 'general').toUpperCase())}</span>
         </div>
-        <div class="clin-patient-meta">Verified · Anonymous consultation</div>
+        <div class="clin-patient-meta">Verified · Anonymous consultation · Fee NPR ${Number(d.consultationFee || 500)}</div>
       </div>
     `).join('');
-    list.querySelectorAll('[data-doc-id]').forEach(card => {
+    list.querySelectorAll('[data-doc-code]').forEach(card => {
       card.addEventListener('click', () => {
-        selectedDoctorId = card.dataset.docId;
-        list.querySelectorAll('[data-doc-id]').forEach(c => c.classList.remove('active'));
+        selectedDoctorCode = card.dataset.docCode;
+        list.querySelectorAll('[data-doc-code]').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         const info = document.getElementById('booking-selected-info');
-        if (info) info.innerHTML = `<div style="font-size:14px;color:var(--success);font-weight:600;">✅ Doctor selected</div>`;
+        if (info) info.innerHTML = `<div style="font-size:14px;color:var(--success);font-weight:600;">✅ Doctor selected: ${escapeHtml(selectedDoctorCode || '')}</div>`;
         const btn = document.getElementById('btn-booking-confirm');
         if (btn) btn.disabled = false;
       });

@@ -66,6 +66,7 @@ import {
   updateAppointmentStatus,
   APPOINTMENT_STATUS,
 } from "./store/appointmentStore.js";
+import { listCommunityPosts, saveCommunityPost } from "./store/communityStore.js";
 import { analyzePatientJourney, shouldTriggerConsultationAlert } from "./lib/aiAnalysis.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -126,7 +127,7 @@ app.use((req, _res, next) => {
 app.use(express.static(path.resolve(__dirname, "../../web")));
 
 app.get("/health", (req, res) => {
-  sendOk(req, res, { service: "aegisspeak-api", ai: azureLlmActive, aiProvider: azureLlmActive ? "azure-openai" : "fallback" }, 200, { domain: "health" });
+  sendOk(req, res, { service: "mental-compass-api", ai: azureLlmActive, aiProvider: azureLlmActive ? "azure-openai" : "fallback" }, 200, { domain: "health" });
 });
 
 // ── Check-in Endpoint (enhanced with AI clinical summary) ──
@@ -280,6 +281,36 @@ app.get("/api/users/:userId/insights", (req, res) => {
   const records = listCheckins(userId);
   const insights = buildPredictiveInsights(records);
   sendOk(req, res, { userId, insights }, 200, { domain: "insights" });
+});
+
+app.get("/api/community/posts", (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit || 50)));
+  const posts = listCommunityPosts(limit);
+  sendOk(req, res, { total: posts.length, posts }, 200, { domain: "community" });
+});
+
+app.post("/api/community/posts", (req, res) => {
+  const payload = req.body || {};
+  const text = String(payload.text || "").trim();
+  if (!text) {
+    return sendError(req, res, 400, "COMMUNITY_TEXT_REQUIRED", "Post text is required.");
+  }
+  if (text.length > 1200) {
+    return sendError(req, res, 400, "COMMUNITY_TEXT_TOO_LONG", "Post must be 1200 characters or less.");
+  }
+
+  const post = {
+    id: uuidv4(),
+    author: "You (Anonymous)",
+    avatar: String(payload.avatar || "🌟").slice(0, 2),
+    text,
+    supports: 0,
+    relates: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  saveCommunityPost(post);
+  sendOk(req, res, { post }, 201, { domain: "community" });
 });
 
 app.post("/api/transport/sms", (req, res) => {
@@ -1139,7 +1170,7 @@ app.post("/api/payments/mock-checkout", requireAuth, requireRole(ROLES.DOCTOR, R
       paymentRef,
       subscriptionStatus: "active",
       paymentVerified: true,
-      receipt: { amount: 2999, currency: "NPR", plan: "AegisSpeak Professional", paidAt: new Date().toISOString() },
+      receipt: { amount: 2999, currency: "NPR", plan: "Mental Compass Professional", paidAt: new Date().toISOString() },
       message: "Payment confirmed. Your platform access is now active.",
     }, 200, { domain: "payments" });
   } catch (err) {
@@ -1213,7 +1244,7 @@ app.use((req, res) => {
 const adminAccount = seedSuperAdmin();
 
 app.listen(port, () => {
-  console.log(`AegisSpeak backend listening on :${port}`);
+  console.log(`Mental Compass backend listening on :${port}`);
   console.log(`AI mode: ${azureLlmActive ? "Azure OpenAI active" : "Template fallback"}`);
   console.log(`IAM: Super admin seeded (admin@aegisspeak.com)`);
 });

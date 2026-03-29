@@ -307,7 +307,7 @@ export default function App() {
               <Text style={s.logoText}>A</Text>
             </LinearGradient>
             <View>
-              <Text style={s.heroTitle}>AegisSpeak</Text>
+              <Text style={s.heroTitle}>Mental Compass</Text>
               <Text style={s.heroSub}>Predictive · Personalized · Privacy-First</Text>
             </View>
             <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>EDGE</Text></View>

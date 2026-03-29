@@ -1,13 +1,13 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — Enhanced Features Module
-   Milestones, Learning Vault, Community, Wipe Log,
-   Triage, Alerts, Compliance
-   ═══════════════════════════════════════════════ */
+  Mental Compass — Enhanced Features Module
+  Milestones, Learning Vault, Community, Wipe Log,
+  Triage, Alerts, Compliance
+  ═══════════════════════════════════════════════ */
 
 // ═══ MOCK DATA ═══
 
 const MOCK_MILESTONES = [
-  { date: '2026-03-28', title: 'Started Your Journey', desc: 'Created your AegisSpeak account and completed onboarding', xp: 10, status: 'completed' },
+  { date: '2026-03-28', title: 'Started Your Journey', desc: 'Created your Mental Compass account and completed onboarding', xp: 10, status: 'completed' },
   { date: '2026-03-26', title: 'First Check-in', desc: 'Completed your first daily mood check-in', xp: 5, status: 'completed' },
   { date: '2026-03-24', title: 'Voice Analysis Unlocked', desc: 'Recorded your first voice sample for biomarker extraction', xp: 8, status: 'completed' },
   { date: '2026-03-22', title: '3-Day Streak', desc: 'Maintained 3 consecutive days of check-ins', xp: 15, status: 'completed' },
@@ -331,7 +331,7 @@ function renderWipeLog() {
       </div>`;
   }
 
-  // Shred demo
+  // Shred flow
   const shredBtn = document.getElementById('btn-shred-demo');
   if (shredBtn) {
     shredBtn.addEventListener('click', runShredDemo);
@@ -367,7 +367,7 @@ function runShredDemo() {
       container.classList.remove('shredding');
       status.textContent = '✅ All data securely destroyed — zero recoverable fragments';
       status.style.color = 'var(--success)';
-      showToast('🗑️ Shred demonstration complete — data irrecoverable');
+      showToast('🗑️ Secure shred complete — data irrecoverable');
     }
   }, 120);
 }

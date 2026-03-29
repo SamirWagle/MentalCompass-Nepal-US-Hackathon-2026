@@ -1,5 +1,5 @@
 /**
- * AegisSpeak — Gentle AI Suggestion Engine
+ * Mental Compass — Gentle AI Suggestion Engine
  *
  * CRITICAL RULE: This engine NEVER diagnoses. It NEVER says "you are depressed/crazy."
  * It ONLY provides gentle lifestyle habit suggestions: music, articles, exercises, breathing.

@@ -65,7 +65,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         <View style={s.brandRow}>
           <Text style={s.logo}>🛡️</Text>
           <View>
-            <Text style={s.brandText}>AegisSpeak</Text>
+            <Text style={s.brandText}>Mental Compass</Text>
             <Text style={s.brandSub}>AI Mental Health Copilot</Text>
           </View>
         </View>

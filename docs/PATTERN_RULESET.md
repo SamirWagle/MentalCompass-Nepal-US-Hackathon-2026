@@ -1,4 +1,4 @@
-# AegisSpeak — Pattern Ruleset
+# Mental Compass — Pattern Ruleset
 
 > **MANDATORY READ** before writing any new backend or frontend code for this project.
 > All new code MUST follow these conventions exactly. Deviation = rejection.

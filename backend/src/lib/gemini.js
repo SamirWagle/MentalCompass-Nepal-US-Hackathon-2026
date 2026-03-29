@@ -75,7 +75,7 @@ export async function generateCopilotReply({
     .map((m, i) => `  [${i + 1}] "${m.userMessage}" -> copilot: "${m.copilotSummary}"`)
     .join("\n");
 
-  const prompt = `You are AegisSpeak, a compassionate AI mental health copilot. Your personality style is "${personality}".
+  const prompt = `You are Mental Compass, a compassionate AI mental health copilot. Your personality style is "${personality}".
 Language: ${language === "ne" ? "Nepali" : language === "hi" ? "Hindi" : "English"}.
 
 Current patient state:
@@ -105,7 +105,7 @@ Instructions:
 
   try {
     const text = await callAzureChat({
-      systemPrompt: "You are AegisSpeak's safe, empathetic mental health copilot.",
+      systemPrompt: "You are Mental Compass's safe, empathetic mental health copilot.",
       userPrompt: prompt,
       temperature: 0.6,
       maxTokens: 420,

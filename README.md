@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/IAM-Role%20Based-yellow?style=for-the-badge" />
 </p>
 
-# AegisSpeak - AI Mental Health Copilot
+# Mental Compass - AI Mental Health Copilot
 
 A journaling-first mental health platform with an anonymous pipeline connecting patients, doctors, and community health volunteers. Users journal daily; doctors review anonymized data; AI provides gentle habit suggestions — never diagnoses.
 
@@ -142,7 +142,7 @@ Nepal-US-Hackathon-2026/
 ├── frontend/
 │   └── ... (Expo React Native)
 ├── scripts/
-│   └── seed_demo.py               ← Python demo data generator
+│   └── seed_demo.py               ← Python sample data generator
 ├── web/
 │   ├── app.js
 │   ├── features.js
@@ -185,7 +185,7 @@ LLM provider configuration in `.env`:
 | Email | `admin@aegisspeak.com` |
 | Password | `AegisAdmin@2026` |
 
-### 3) Seed Demo Data (optional)
+### 3) Seed Initial Data (optional)
 
 ```bash
 pip install requests
@@ -320,7 +320,7 @@ Notes:
 
 ## Hackathon Value
 
-AegisSpeak is built for low-resource, stigma-sensitive contexts:
+Mental Compass is built for low-resource, stigma-sensitive contexts:
 - 📝 **Journaling-first** — no clinical language, just daily reflections
 - 🔒 **Anonymous pipeline** — doctors never see patient names, only `JRN-XXXX` IDs
 - 🤖 **AI never diagnoses** — only suggests music, articles, exercises, breathing

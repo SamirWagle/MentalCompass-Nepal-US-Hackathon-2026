@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — Apple-Level Design System
-   ═══════════════════════════════════════════════ */
+  Mental Compass — Apple-Level Design System
+  ═══════════════════════════════════════════════ */
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -86,6 +86,14 @@ body {
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 10px 22px rgba(10,132,255,0.22);
   font-size: 20px;
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
 }
 .logo-text { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
 .logo-sub { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
@@ -1181,6 +1189,74 @@ body.ux-calm .nav-item {
 }
 .modal-close:hover { border-color: var(--danger); color: var(--danger); }
 
+.intervention-fullscreen {
+  padding: 20px;
+}
+
+.intervention-fullscreen .intervention-panel {
+  width: min(980px, 96vw);
+  min-height: min(84vh, 760px);
+  display: flex;
+  flex-direction: column;
+}
+
+.intervention-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.intervention-step-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(56,189,248,0.35);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.intervention-prompt {
+  font-size: 20px;
+  line-height: 1.45;
+  text-align: center;
+  max-width: 720px;
+  color: var(--text-primary);
+}
+
+.intervention-input {
+  width: min(760px, 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.intervention-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
+}
+
+.intervention-progress-wrap {
+  width: min(760px, 100%);
+}
+
+.intervention-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* ── Guided Breathing Circle ── */
 .breathing-guided-circle {
   width: 180px; height: 180px; border-radius: 50%; margin: 0 auto;
@@ -1266,6 +1342,16 @@ body.ux-calm .nav-item {
   .hero-banner { padding: 24px 20px; }
   .hero-title { font-size: 24px; }
   .stat-value { font-size: 22px; }
+  .intervention-fullscreen { padding: 12px; }
+  .intervention-fullscreen .intervention-panel {
+    width: 100%;
+    min-height: 94vh;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .intervention-prompt {
+    font-size: 17px;
+  }
 }
 
 /* ═══ MILESTONES ═══ */
@@ -1683,6 +1769,7 @@ body.ux-calm .nav-item {
   display: flex; align-items: center; justify-content: center;
   font-size: 24px;
   box-shadow: 0 10px 30px rgba(10,132,255,0.35);
+  overflow: hidden;
 }
 
 .login-logo-text {

@@ -86,7 +86,7 @@ export default function CheckinCallScreen({ visible, onAnswer, onDecline }: Prop
         </View>
 
         {/* App identity */}
-        <Text style={s.appName}>AegisSpeak</Text>
+        <Text style={s.appName}>Mental Compass</Text>
         <Text style={s.subtitle}>Your wellness check-in is ready</Text>
 
         {/* Pulsing ring avatar */}

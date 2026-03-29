@@ -1,10 +1,27 @@
 /* ═══════════════════════════════════════════════
-   AegisSpeak — Application Logic
-   ═══════════════════════════════════════════════ */
+  Mental Compass — Application Logic
+  ═══════════════════════════════════════════════ */
 
 const API = 'http://localhost:4000';
 const USER_ID = 'demo-user-nepal';
 const UX_MODE_KEY = 'aegis_ux_mode';
+
+function getSessionUser() {
+  return window.__aegisSession?.user || null;
+}
+
+function getActiveUserId() {
+  const user = getSessionUser();
+  return user?.id || user?.anonymousId || USER_ID;
+}
+
+function getOptionalAuthHeaders() {
+  if (typeof window.__aegisGetAuthHeaders === 'function') {
+    const hdrs = window.__aegisGetAuthHeaders();
+    if (hdrs && hdrs.Authorization) return hdrs;
+  }
+  return null;
+}
 
 function unwrapApi(payload) {
   if (payload && typeof payload === 'object' && payload.data) return payload.data;
@@ -53,6 +70,7 @@ const state = {
   },
   clinicianPatients: [],
   clinicianAlerts: [],
+  patientHome: null,
 };
 
 function applyUxMode(mode) {
@@ -99,6 +117,9 @@ function getNavItem(screen) {
 
 function navigateToScreen(screen, opts = {}) {
   const { updateHash = true } = opts;
+  if (screen === 'career') {
+    return navigateToScreen('dashboard', { updateHash });
+  }
   const item = getNavItem(screen);
 
   // Allow navigation even without a static nav item (IAM injected screens)
@@ -124,6 +145,10 @@ function navigateToScreen(screen, opts = {}) {
   if (screenEl) {
     screenEl.classList.add('active');
     screenEl.style.display = 'block';
+  }
+
+  if (screen === 'screening') {
+    initScreeningPage();
   }
 
   if (updateHash) {
@@ -695,7 +720,7 @@ async function runCheckin() {
   btn.disabled = true;
 
   const payload = {
-    userId: USER_ID,
+    userId: getActiveUserId(),
     roleContext: document.getElementById('career-role')?.value || 'student',
     mood: +document.getElementById('sl-mood').value,
     anxiety: +document.getElementById('sl-anxiety').value,
@@ -786,17 +811,44 @@ function renderCheckinResult(data) {
 }
 
 // ── Emergency ──
-document.getElementById('btn-emergency').addEventListener('click', async () => {
+async function triggerEmergencySOS() {
   try {
+    const authHeaders = typeof window.__aegisGetAuthHeaders === 'function' ? window.__aegisGetAuthHeaders() : null;
+    const hasAuth = authHeaders && authHeaders.Authorization;
+
+    if (hasAuth) {
+      const res = await fetch(`${API}/api/severe/call/patient`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ reason: 'manual-emergency-sos', preferredTime: 'asap' })
+      });
+      const raw = await res.json();
+      const data = unwrapApi(raw);
+      if (raw?.ok === false) {
+        throw new Error(raw?.error?.message || 'Could not send SOS');
+      }
+      showToast(data?.message || '🚨 SOS sent to care team');
+      refreshRemote();
+      return;
+    }
+
     await fetch(`${API}/api/escalations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: USER_ID, severity: 'high', reason: 'manual-emergency-trigger', contacts: ['trusted-contact-1', 'local-health-post'] })
+      body: JSON.stringify({ userId: getActiveUserId(), severity: 'high', reason: 'manual-emergency-trigger', contacts: ['trusted-contact-1', 'local-health-post'] })
     });
     showToast('🚨 Emergency escalation sent to clinician and contacts');
     refreshRemote();
-  } catch { showToast('⚠️ Could not send escalation packet'); }
-});
+  } catch {
+    showToast('⚠️ Could not send emergency request');
+  }
+}
+
+const emergencyBtn = document.getElementById('btn-emergency');
+if (emergencyBtn) emergencyBtn.addEventListener('click', triggerEmergencySOS);
+
+const emergencyHomeBtn = document.getElementById('btn-emergency-home');
+if (emergencyHomeBtn) emergencyHomeBtn.addEventListener('click', triggerEmergencySOS);
 
 // ── SMS Fallback ──
 document.getElementById('btn-sms-fallback').addEventListener('click', async () => {
@@ -805,7 +857,7 @@ document.getElementById('btn-sms-fallback').addEventListener('click', async () =
     const res = await fetch(`${API}/api/transport/sms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: USER_ID, riskScore: state.result.risk.score, riskLevel: state.result.risk.riskLevel, escalation: state.result.escalation })
+      body: JSON.stringify({ userId: getActiveUserId(), riskScore: state.result.risk.score, riskLevel: state.result.risk.riskLevel, escalation: state.result.escalation })
     });
     const raw = await res.json();
     const data = unwrapApi(raw);
@@ -890,6 +942,16 @@ function updateDashboard() {
       rl.style.color = state.result.risk.score >= 70 ? 'var(--danger)' : state.result.risk.score >= 40 ? 'var(--warning)' : 'var(--success)';
     }
     if (rs) rs.textContent = state.result.risk.score + ' / 100';
+  } else if (state.patientHome) {
+    const rl = document.getElementById('dash-risk-label');
+    const rs = document.getElementById('dash-risk-score');
+    const urgent = state.patientHome.urgentCount || 0;
+    const level = urgent > 0 ? 'HIGH' : (state.patientHome.suggestConsultation ? 'MODERATE' : 'LOW');
+    if (rl) {
+      rl.textContent = level;
+      rl.style.color = urgent > 0 ? 'var(--danger)' : (state.patientHome.suggestConsultation ? 'var(--warning)' : 'var(--success)');
+    }
+    if (rs) rs.textContent = `Entries ${state.patientHome.entryCount} · Alerts ${urgent}`;
   }
 
   // Avatar
@@ -904,12 +966,15 @@ function updateDashboard() {
 
 // ── Remote Data ──
 async function refreshRemote() {
+  const activeUserId = getActiveUserId();
+  const authHeaders = getOptionalAuthHeaders();
+
   try {
     const [trendRaw, recRaw, insRaw, escRaw] = await Promise.all([
-      fetch(`${API}/api/users/${USER_ID}/trends`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/records`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/insights`).then(r => r.json()),
-      fetch(`${API}/api/users/${USER_ID}/escalations`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/trends`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/records`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/insights`).then(r => r.json()),
+      fetch(`${API}/api/users/${activeUserId}/escalations`).then(r => r.json()),
     ]);
 
     const trendRes = unwrapApi(trendRaw);
@@ -922,20 +987,83 @@ async function refreshRemote() {
     state.insights = insRes.insights || WEB_DUMMY_INSIGHTS;
     state.escalations = ((escRes.records && escRes.records.length) ? escRes.records : WEB_DUMMY_ESCALATIONS).slice(-8).reverse();
 
+    if (authHeaders) {
+      try {
+        const [journalsRaw, apptsRaw] = await Promise.all([
+          fetch(`${API}/api/journals/mine?limit=30`, { headers: authHeaders }).then(r => r.json()),
+          fetch(`${API}/api/appointments/mine`, { headers: authHeaders }).then(r => r.json()),
+        ]);
+        const jData = journalsRaw?.data || {};
+        const entries = jData.entries || jData.journals || [];
+        const stats = jData.stats || null;
+        const assessments = entries.flatMap((e) => e.doctorAssessments || []);
+        const urgentCount = assessments.filter((a) => a.severity === 'severe' || a.requiresImmediateCall || a.recommendsConsultation).length;
+        const appts = apptsRaw?.data?.appointments || apptsRaw?.appointments || [];
+        const upcoming = appts
+          .filter((a) => a.scheduledAt)
+          .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+
+        state.patientHome = {
+          entryCount: entries.length,
+          urgentCount,
+          suggestConsultation: !!jData.consultation?.suggest,
+          severeAlert: !!jData.severeAlert,
+          nextAppointmentAt: upcoming[0]?.scheduledAt || null,
+          avgSentiment: typeof stats?.avgSentiment === 'number' ? stats.avgSentiment : null,
+        };
+
+        if (typeof state.patientHome.avgSentiment === 'number') {
+          state.stability = Math.max(0, Math.min(100, Math.round(state.patientHome.avgSentiment)));
+        }
+
+        renderPatientDashboardRecommendations();
+      } catch {
+        state.patientHome = null;
+      }
+    }
+
     renderMoodCharts();
     renderClinicianRecords();
     renderInsights();
     renderAuditLog();
+    updateDashboard();
   } catch {
     state.trends = WEB_DUMMY_TRENDS;
     state.records = WEB_DUMMY_RECORDS.slice(-8).reverse();
     state.insights = WEB_DUMMY_INSIGHTS;
     state.escalations = WEB_DUMMY_ESCALATIONS.slice(-8).reverse();
+    state.patientHome = null;
     renderMoodCharts();
     renderClinicianRecords();
     renderInsights();
     renderAuditLog();
+    updateDashboard();
   }
+}
+
+// Allow IAM flow to force-refresh dashboard data right after login.
+window.__aegisRefreshDashboard = refreshRemote;
+
+function renderPatientDashboardRecommendations() {
+  const el = document.getElementById('dash-recommendations');
+  if (!el || !state.patientHome) return;
+
+  const lines = [];
+  if (state.patientHome.nextAppointmentAt) {
+    lines.push(`📅 Next consultation: ${new Date(state.patientHome.nextAppointmentAt).toLocaleString()}`);
+  } else {
+    lines.push('📅 No upcoming consultation yet. Book one if you want clinician support.');
+  }
+
+  if (state.patientHome.urgentCount > 0) {
+    lines.push(`🚨 ${state.patientHome.urgentCount} care team ping(s) need your attention. Open Care Operations.`);
+  } else {
+    lines.push('✅ No urgent care-team pings right now. Keep your daily rhythm.');
+  }
+
+  lines.push(`📝 Journal entries recorded: ${state.patientHome.entryCount}`);
+
+  el.innerHTML = lines.map((line) => `<div class="signal-item"><span class="signal-name">${escapeHtml(line)}</span></div>`).join('');
 }
 
 function renderMoodCharts() {
@@ -1263,6 +1391,12 @@ function setTextAndColor(id, val, col) { const el = document.getElementById(id);
 function setBarWidth(id, pct) { const el = document.getElementById(id); if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+        if (e.key === 'Escape') {
+          closeCheckinCallOverlay();
+          closeBreathingModal();
+          closeGroundingModal();
+          closeCbtModal();
+        }
 // ── Init ──
 initUxModeControls();
 updateDashboard();
@@ -1306,7 +1440,7 @@ async function startVoice() {
     document.getElementById('btn-voice-start').style.display = 'none';
     document.getElementById('btn-voice-stop').style.display = 'inline-flex';
     document.getElementById('btn-voice-stop').classList.add('recording-pulse');
-    document.getElementById('voice-timer').style.display = 'block';
+renderGamification();
     document.getElementById('voice-status').textContent = '🔴 Recording... speak naturally';
 
     // Timer
@@ -1314,14 +1448,13 @@ async function startVoice() {
       const elapsed = Math.floor((Date.now() - voiceStartTime) / 1000);
       const m = Math.floor(elapsed / 60);
       const s = elapsed % 60;
-      document.getElementById('voice-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const entryCount = state.patientHome?.entryCount ?? state.records.length;
+  setText('dash-xp', entryCount);
     }, 200);
 
     // Waveform
-    drawWaveform();
 
     // Speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SR();
       recognition.continuous = true;
@@ -1331,9 +1464,7 @@ async function startVoice() {
         let final = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           if (ev.results[i].isFinal) final += ev.results[i][0].transcript + ' ';
-          else interim += ev.results[i][0].transcript;
-        }
-        transcriptText += final;
+  showToast('🧘 Breathing exercise complete');
         document.getElementById('voice-transcript').textContent = transcriptText + interim;
       };
       recognition.onerror = () => {};
@@ -1492,26 +1623,38 @@ function gad7Severity(score) {
   return { level: 'Severe', color: 'var(--danger)' };
 }
 
-renderScreeningQuestions('phq9-questions', PHQ9_QUESTIONS, 'phq9');
-renderScreeningQuestions('gad7-questions', GAD7_QUESTIONS, 'gad7');
+function initScreeningPage() {
+  renderScreeningQuestions('phq9-questions', PHQ9_QUESTIONS, 'phq9');
+  renderScreeningQuestions('gad7-questions', GAD7_QUESTIONS, 'gad7');
 
-document.getElementById('btn-score-phq9').addEventListener('click', () => {
-  const r = scoreScreening('phq9-questions', 'phq9', 9);
-  if (!r.complete) { showToast('⚠️ Please answer all 9 questions'); return; }
-  const s = phq9Severity(r.total);
-  document.getElementById('phq9-result').innerHTML = `<span style="color:${s.color}">${r.total}/27 — ${s.level} Depression</span>`;
-  state.phq9Score = r.total;
-  checkScreeningSummary();
-});
+  const phqBtn = document.getElementById('btn-score-phq9');
+  if (phqBtn && !phqBtn.dataset.bound) {
+    phqBtn.dataset.bound = 'true';
+    phqBtn.addEventListener('click', () => {
+      const r = scoreScreening('phq9-questions', 'phq9', 9);
+      if (!r.complete) { showToast('⚠️ Please answer all 9 questions'); return; }
+      const s = phq9Severity(r.total);
+      document.getElementById('phq9-result').innerHTML = `<span style="color:${s.color}">${r.total}/27 — ${s.level} Depression</span>`;
+      state.phq9Score = r.total;
+      checkScreeningSummary();
+    });
+  }
 
-document.getElementById('btn-score-gad7').addEventListener('click', () => {
-  const r = scoreScreening('gad7-questions', 'gad7', 7);
-  if (!r.complete) { showToast('⚠️ Please answer all 7 questions'); return; }
-  const s = gad7Severity(r.total);
-  document.getElementById('gad7-result').innerHTML = `<span style="color:${s.color}">${r.total}/21 — ${s.level} Anxiety</span>`;
-  state.gad7Score = r.total;
-  checkScreeningSummary();
-});
+  const gadBtn = document.getElementById('btn-score-gad7');
+  if (gadBtn && !gadBtn.dataset.bound) {
+    gadBtn.dataset.bound = 'true';
+    gadBtn.addEventListener('click', () => {
+      const r = scoreScreening('gad7-questions', 'gad7', 7);
+      if (!r.complete) { showToast('⚠️ Please answer all 7 questions'); return; }
+      const s = gad7Severity(r.total);
+      document.getElementById('gad7-result').innerHTML = `<span style="color:${s.color}">${r.total}/21 — ${s.level} Anxiety</span>`;
+      state.gad7Score = r.total;
+      checkScreeningSummary();
+    });
+  }
+}
+
+initScreeningPage();
 
 function checkScreeningSummary() {
   if (state.phq9Score == null || state.gad7Score == null) return;
@@ -1626,10 +1769,10 @@ function exportPDF() {
   const gad = state.gad7Score != null ? `GAD-7: ${state.gad7Score}/21 (${gad7Severity(state.gad7Score).level})` : 'GAD-7: Not administered';
 
   const content = `
-AEGISSPEAK CLINICAL REPORT
+MENTAL COMPASS CLINICAL REPORT
 ══════════════════════════════════════════
 Generated: ${now}
-Patient ID: ${USER_ID}
+User ID: ${getActiveUserId()}
 Report Type: AI-Assisted Triage Summary
 
 RISK ASSESSMENT
@@ -1686,16 +1829,16 @@ Encryption: AES-256-GCM
 Compliance: HIPAA, GDPR
 
 ═══════════════════════════════════════
-This report was partially generated by AI (Google Gemini).
+This report was partially generated by AI.
 Clinical decisions should be made by qualified professionals.
-AegisSpeak — Privacy-First Mental Health Copilot
+Mental Compass — Privacy-First Mental Health Copilot
   `;
 
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AegisSpeak_Report_${new Date().toISOString().slice(0,10)}.txt`;
+  a.download = `MentalCompass_Report_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('📄 Clinical report exported');
@@ -1722,7 +1865,7 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AegisSpeak_Data_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `MentalCompass_Data_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('📊 Data exported as CSV');
@@ -1732,7 +1875,7 @@ function exportCSV() {
 // FEATURE: Keyboard Shortcuts
 // ═══════════════════════════════════════════════
 
-const NAV_KEYS = ['dashboard','copilot','checkin','career','support','community','vault','milestones','voice','signals','screening','insights','clinician','triage','alerts','compliance','privacy','wipelog'];
+const NAV_KEYS = ['dashboard','copilot','checkin','support','community','vault','milestones','voice','signals','screening','insights','clinician','triage','alerts','compliance','privacy','wipelog'];
 document.addEventListener('keydown', e => {
   // Don't trigger when typing in inputs
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;

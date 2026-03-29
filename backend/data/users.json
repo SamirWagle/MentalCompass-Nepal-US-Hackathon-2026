@@ -119,9 +119,9 @@
     },
     "wearableConnected": true,
     "wearableEncryptedData": {
-      "encrypted": "3AeQ94eASJB8L1dFdQahbVeiwXVVoQglTddtyM+Gg+1eTsxPyb6kyPKpTadbDLR3JcH6FWdETBh+HxueWpFeTzm6h+37+T0L6PhNJXbeDA9ykEEmYGAWBCFpxptFnan4y/Vx3Kp/ZHX7A0aEEDhLoKLVKG0mTA==",
-      "iv": "qrbFNEatQwYidEb9",
-      "authTag": "dXGxpuIh7lzcOBHa9WJqEg=="
+      "encrypted": "AGMpSLD8OQUppPAhly5DwyG1XJVh+tWtkR+trQQh3GChkIX3Cd8q91IHvDRKlVZMBDcvoEpD/Xjg38RgAWBvI7sOo15MWk176yyrDz9wy28IV9b6AVe2RRkXLAg0ga0yhc8n1MGAEAtj52sCQDLDlAuD/OWhFQ==",
+      "iv": "1Kp3uF8maxXuGvml",
+      "authTag": "m2nGCHuZfstAJ2WkWUTYiA=="
     },
     "doctorCode": null
   },
@@ -169,6 +169,34 @@
     "subscriptionStatus": null,
     "paymentVerified": false,
     "checkinSchedule": null,
+    "wearableConnected": false,
+    "wearableEncryptedData": null,
+    "doctorCode": null
+  },
+  {
+    "id": "300e94b9-d445-48b8-8340-9092ce6833a6",
+    "anonymousId": "JRN-AQ9U",
+    "email": "asd@asd.com",
+    "password": "$2b$10$CtGG9FnudsW9acYwMuHTHOthxx5dguIb2W5HOmjrCfIBEfJeK4C7K",
+    "fullName": "asdd asdd",
+    "role": "patient",
+    "isActive": true,
+    "createdAt": "2026-03-29T08:42:11.985Z",
+    "createdBy": "5f07547c-3df5-48dc-a12c-e33c1cfe0cfb",
+    "linkedPatientId": null,
+    "doctorType": null,
+    "phone": "9800000000",
+    "avatar": "🧑",
+    "consentGiven": true,
+    "consentAt": "2026-03-29T08:42:11.985Z",
+    "subscription": null,
+    "subscriptionStatus": null,
+    "paymentVerified": false,
+    "checkinSchedule": {
+      "hour": 20,
+      "minute": 0,
+      "timezone": "Asia/Kathmandu"
+    },
     "wearableConnected": false,
     "wearableEncryptedData": null,
     "doctorCode": null
