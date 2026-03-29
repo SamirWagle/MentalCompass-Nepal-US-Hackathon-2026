@@ -1,10 +1,21 @@
+import OpenAI from "openai";
+
 const AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || "").replace(/\/+$/, "");
 const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY || "";
 const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "";
-const AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
+
+let client = null;
 
 function hasAzureOpenAI() {
   return Boolean(AZURE_OPENAI_ENDPOINT && AZURE_OPENAI_API_KEY && AZURE_OPENAI_DEPLOYMENT);
+}
+
+// Initialize OpenAI client with Azure endpoint
+if (hasAzureOpenAI()) {
+  client = new OpenAI({
+    baseURL: AZURE_OPENAI_ENDPOINT,
+    apiKey: AZURE_OPENAI_API_KEY,
+  });
 }
 
 console.info(`[LLM] Provider: ${hasAzureOpenAI() ? "Azure OpenAI" : "Fallback"}`);
@@ -16,12 +27,16 @@ async function callAzureChat({
   maxTokens = 700,
   responseFormat,
 }) {
-  const url = `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${AZURE_OPENAI_DEPLOYMENT}/chat/completions?api-version=${encodeURIComponent(AZURE_OPENAI_API_VERSION)}`;
+  if (!client) {
+    throw new Error("Azure OpenAI client not initialized");
+  }
+
   const body = {
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
+    model: AZURE_OPENAI_DEPLOYMENT,
     temperature,
     max_tokens: maxTokens,
   };
@@ -30,22 +45,8 @@ async function callAzureChat({
     body.response_format = { type: "json_object" };
   }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": AZURE_OPENAI_API_KEY,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Azure OpenAI error ${res.status}: ${errText.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  return String(data?.choices?.[0]?.message?.content || "").trim();
+  const completion = await client.chat.completions.create(body);
+  return String(completion?.choices?.[0]?.message?.content || "").trim();
 }
 
 function parseJsonText(text) {
