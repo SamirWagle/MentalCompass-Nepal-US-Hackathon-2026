@@ -32,7 +32,7 @@ function getAuthHeaders() {
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
   doctor: 'Doctor',
-  patient: 'Patient',
+  patient: 'User',
   guardian: 'Guardian',
   chv: 'FCHV Worker',
 };
@@ -147,7 +147,7 @@ function buildLoginHTML() {
         <div class="login-role-selector" id="login-role-selector" aria-label="Select your role">
           <button class="login-role-btn active" data-role="patient" type="button" aria-pressed="true">
             <span class="login-role-icon">🧑</span>
-            <span class="login-role-label">Patient</span>
+            <span class="login-role-label">User</span>
           </button>
           <button class="login-role-btn" data-role="doctor" type="button" aria-pressed="false">
             <span class="login-role-icon">🩺</span>
@@ -477,7 +477,7 @@ function injectRoleBasedNav(user) {
   if (user.role === 'super_admin') {
     items.push({ screen: 'admin-panel', icon: '⚙️', label: 'IAM Panel', section: 'Administration' });
     items.push({ screen: 'doctor-dashboard', icon: '🩺', label: 'Doctor Dashboard', section: 'Clinical' });
-    items.push({ screen: 'doctor-journal', icon: '📓', label: 'Patient Journal', section: null });
+    items.push({ screen: 'doctor-journal', icon: '📓', label: 'User Journal', section: null });
     items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
     items.push({ screen: 'chv-dashboard', icon: '🏥', label: 'FCHV Dashboard', section: 'Field' });
     items.push({ screen: 'guardian-view', icon: '👁️', label: 'Guardian View', section: 'Family Access' });
@@ -487,15 +487,15 @@ function injectRoleBasedNav(user) {
     const hideNavOnly = (k) => { const n = document.querySelector(`.nav-item[data-screen="${k}"]`); if (n) n.style.display = 'none'; };
     ['clinician','triage','alerts','voice','signals','screening','insights'].forEach(hideNavOnly);
     items.push({ screen: 'doctor-dashboard', icon: '🩺', label: 'Doctor Dashboard', section: 'Provider' });
-    items.push({ screen: 'doctor-journal', icon: '📓', label: 'Patient Journal', section: null });
+    items.push({ screen: 'doctor-journal', icon: '📓', label: 'User Journal', section: null });
     items.push({ screen: 'doctor-counseling', icon: '🏥', label: 'Care Operations', section: 'Provider' });
     items.push({ screen: 'vault', icon: '📚', label: 'Learn & Grow', section: 'Provider' });
     items.push({ screen: 'community', icon: '💬', label: 'Community', section: null });
   } else if (user.role === 'guardian') {
-    items.push({ screen: 'guardian-view', icon: '👁️', label: 'Patient Overview', section: 'Family Access' });
+    items.push({ screen: 'guardian-view', icon: '👁️', label: 'User Overview', section: 'Family Access' });
   } else if (user.role === 'patient') {
     const hideNavOnly = (k) => { const n = document.querySelector(`.nav-item[data-screen="${k}"]`); if (n) n.style.display = 'none'; };
-    ['clinician', 'triage'].forEach(hideNavOnly);
+    ['clinician', 'triage', 'alerts', 'compliance'].forEach(hideNavOnly);
     items.push({ screen: 'journal', icon: '📓', label: 'Journal', section: 'My Health' });
     items.push({ screen: 'booking', icon: '📅', label: 'Book Consultation', section: null });
     items.push({ screen: 'my-settings', icon: '⚙️', label: 'Settings', section: null });

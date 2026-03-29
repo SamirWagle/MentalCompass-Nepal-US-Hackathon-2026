@@ -115,8 +115,27 @@ function getNavItem(screen) {
   return document.querySelector(`.nav-item[data-screen="${screen}"]`);
 }
 
+function safeInitScreeningPage() {
+  try {
+    initScreeningPage();
+  } catch {
+    // If screening constants are not initialized yet during early bootstrap,
+    // retry on the next tick after the script finishes evaluating.
+    setTimeout(() => {
+      try { initScreeningPage(); } catch {}
+    }, 0);
+  }
+}
+
 function navigateToScreen(screen, opts = {}) {
   const { updateHash = true } = opts;
+  const activeRole = getSessionUser()?.role;
+
+  // Patient role cannot access provider/system-only screens.
+  if (activeRole === 'patient' && ['clinician', 'triage', 'alerts', 'compliance'].includes(screen)) {
+    return navigateToScreen('dashboard', { updateHash });
+  }
+
   if (screen === 'career') {
     return navigateToScreen('dashboard', { updateHash });
   }
@@ -127,7 +146,7 @@ function navigateToScreen(screen, opts = {}) {
   if (!item && !screenEl) return;
 
   if (item) {
-    const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only');
+    const hiddenByMode = state.uxMode === 'calm' && item.classList.contains('full-only') && screen !== 'screening';
     if (hiddenByMode) {
       const fallback = getNavItem('dashboard');
       if (fallback) return navigateToScreen('dashboard', { updateHash });
@@ -148,7 +167,8 @@ function navigateToScreen(screen, opts = {}) {
   }
 
   if (screen === 'screening') {
-    initScreeningPage();
+    safeInitScreeningPage();
+    requestAnimationFrame(() => safeInitScreeningPage());
   }
 
   if (updateHash) {
@@ -226,8 +246,8 @@ function buildVitalsHistory(anxietySeed, sleepSeed) {
 const CLINICIAN_MOCK_PATIENTS = [
   {
     id: 'p-a-2847',
-    code: 'Patient A-2847',
-    name: 'Patient A-2847',
+    code: 'User A-2847',
+    name: 'User A-2847',
     age: 31,
     gender: 'Female',
     location: 'Rural Area',
@@ -247,8 +267,8 @@ const CLINICIAN_MOCK_PATIENTS = [
       { day: '3/24', score: 4.6 },
     ],
     summaryGeneratedAt: 'March 24, 2026 at 2:23 PM',
-    liveAlertCopy: 'Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.',
-    fullVoiceSummary: 'Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.',
+    liveAlertCopy: 'User A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.',
+    fullVoiceSummary: 'User reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: User is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. User expressed willingness to continue treatment and found breathing exercises helpful.',
     medications: [
       { name: 'Sertraline 50mg', dose: 'Daily - Morning' },
       { name: 'Lorazepam 0.5mg', dose: 'As needed' },
@@ -261,13 +281,13 @@ const CLINICIAN_MOCK_PATIENTS = [
     ],
     aiSummaries: [
       'Discussed work anxiety and social isolation as top stressors.',
-      'Breathing exercises are helping and patient remains treatment-engaged.',
+      'Breathing exercises are helping and user remains treatment-engaged.',
       'No suicidal ideation mentioned in this latest voice check-in.'
     ]
   },
   {
     id: 'p-002',
-    code: 'Patient B-4172',
+    code: 'User B-4172',
     name: 'Maya Gurung',
     age: 29,
     gender: 'Female',
@@ -279,8 +299,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 31,
     checkinFrequency: '5/week',
     summaryGeneratedAt: 'March 27, 2026 at 11:10 AM',
-    liveAlertCopy: 'Patient B-4172 reported escalating workplace uncertainty and evening panic spikes in latest check-in.',
-    fullVoiceSummary: 'Patient described increased rumination about role changes and reduced confidence in team communication. Sleep was inconsistent at 5-6 hours, with improved mornings after guided breathing. Appetite is stable and patient remains engaged in scheduled sessions. No self-harm language detected, but anxiety intensity increased over three days.',
+    liveAlertCopy: 'User B-4172 reported escalating workplace uncertainty and evening panic spikes in latest check-in.',
+    fullVoiceSummary: 'User described increased rumination about role changes and reduced confidence in team communication. Sleep was inconsistent at 5-6 hours, with improved mornings after guided breathing. Appetite is stable and user remains engaged in scheduled sessions. No self-harm language detected, but anxiety intensity increased over three days.',
     medications: [
       { name: 'Escitalopram 10mg', dose: 'Daily - Morning' },
       { name: 'Propranolol 10mg', dose: 'Before high-stress events' },
@@ -300,7 +320,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-003',
-    code: 'Patient C-1028',
+    code: 'User C-1028',
     name: 'Rohan Karki',
     age: 34,
     gender: 'Male',
@@ -312,8 +332,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 63,
     checkinFrequency: '7/week',
     summaryGeneratedAt: 'March 28, 2026 at 8:02 AM',
-    liveAlertCopy: 'Patient C-1028 shows stable baseline with no emergency escalation currently required.',
-    fullVoiceSummary: 'Patient reported improved work-life boundaries and consistent recovery habits. Sleep quality is 7-8 hours nightly, and mood remains steady through high-demand periods. Continues journaling and physical activity with strong adherence. No acute warning phrases detected; maintenance plan is working effectively.',
+    liveAlertCopy: 'User C-1028 shows stable baseline with no emergency escalation currently required.',
+    fullVoiceSummary: 'User reported improved work-life boundaries and consistent recovery habits. Sleep quality is 7-8 hours nightly, and mood remains steady through high-demand periods. Continues journaling and physical activity with strong adherence. No acute warning phrases detected; maintenance plan is working effectively.',
     medications: [
       { name: 'Sertraline 25mg', dose: 'Daily - Morning' },
       { name: 'Melatonin 3mg', dose: 'Nightly as needed' },
@@ -333,7 +353,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-004',
-    code: 'Patient D-6391',
+    code: 'User D-6391',
     name: 'Nisha Tamang',
     age: 20,
     gender: 'Female',
@@ -345,8 +365,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 18,
     checkinFrequency: '4/week',
     summaryGeneratedAt: 'March 28, 2026 at 9:40 AM',
-    liveAlertCopy: 'Patient D-6391 showed a sharp anxiety spike around assignment deadlines and family pressure triggers.',
-    fullVoiceSummary: 'Patient identified social pressure and academic uncertainty as current stress amplifiers. Sleep averaged 5 hours in the last two nights, with better mood after support chat scripts. Appetite remains mildly reduced, but patient is still attending sessions and practicing guided grounding. No suicidal ideation mentioned; monitor closely for exam-week escalation.',
+    liveAlertCopy: 'User D-6391 showed a sharp anxiety spike around assignment deadlines and family pressure triggers.',
+    fullVoiceSummary: 'User identified social pressure and academic uncertainty as current stress amplifiers. Sleep averaged 5 hours in the last two nights, with better mood after support chat scripts. Appetite remains mildly reduced, but user is still attending sessions and practicing guided grounding. No suicidal ideation mentioned; monitor closely for exam-week escalation.',
     medications: [
       { name: 'Fluoxetine 20mg', dose: 'Daily - Morning' },
       { name: 'Hydroxyzine 10mg', dose: 'As needed - Evening' },
@@ -366,7 +386,7 @@ const CLINICIAN_MOCK_PATIENTS = [
   },
   {
     id: 'p-005',
-    code: 'Patient E-5510',
+    code: 'User E-5510',
     name: 'Sujan Rai',
     age: 26,
     gender: 'Male',
@@ -378,8 +398,8 @@ const CLINICIAN_MOCK_PATIENTS = [
     treatmentDays: 12,
     checkinFrequency: '3/week',
     summaryGeneratedAt: 'March 28, 2026 at 10:04 AM',
-    liveAlertCopy: 'Patient E-5510 used repeated crisis language and reported severe sleep collapse in latest check-in.',
-    fullVoiceSummary: 'Patient described fear about financial instability and loss of role identity. Sleep dropped below 4 hours on consecutive nights, and hopeless statements increased in intensity. Positive marker: patient accepted immediate follow-up and agreed to contact a trusted support person. Escalation routing is recommended with same-day clinician outreach.',
+    liveAlertCopy: 'User E-5510 used repeated crisis language and reported severe sleep collapse in latest check-in.',
+    fullVoiceSummary: 'User described fear about financial instability and loss of role identity. Sleep dropped below 4 hours on consecutive nights, and hopeless statements increased in intensity. Positive marker: user accepted immediate follow-up and agreed to contact a trusted support person. Escalation routing is recommended with same-day clinician outreach.',
     medications: [
       { name: 'Venlafaxine 37.5mg', dose: 'Daily - Morning' },
       { name: 'Clonazepam 0.25mg', dose: 'Short-term as prescribed' },
@@ -403,7 +423,7 @@ const CLINICIAN_MOCK_ALERTS = [
   {
     id: 'a-001',
     patientId: 'p-a-2847',
-    patientName: 'Patient A-2847',
+    patientName: 'User A-2847',
     timestamp: '2026-03-28T09:12:00Z',
     event: 'High distress in latest voice check-in',
     acknowledged: false,
@@ -478,7 +498,7 @@ async function initClinicianDashboard() {
         if (json.ok && json.data?.queue?.length) {
           state.clinicianPatients = json.data.queue.map((q, i) => ({
             id: q.anonymousId || `live-${i}`,
-            name: `Patient ${q.anonymousId || i}`,
+            name: `User ${q.anonymousId || i}`,
             age: '—', gender: '—',
             location: 'Remote',
             riskLevel: q.riskLevel || (q.latestRisk >= 70 ? 'high' : q.latestRisk >= 40 ? 'moderate' : 'low'),
@@ -588,7 +608,7 @@ async function initClinicianDashboard() {
     contactBtn.dataset.bound = 'true';
     contactBtn.addEventListener('click', () => {
       const active = state.clinicianPatients.find(p => p.id === state.clinicianUi.activePatientId);
-      const label = active?.code || active?.name || 'Selected patient';
+      const label = active?.code || active?.name || 'Selected user';
       showToast(`📞 Contact workflow opened for ${label}`);
     });
   }
@@ -1097,7 +1117,7 @@ function renderClinicianRecords() {
   });
 
   if (!filtered.length) {
-    listEl.innerHTML = '<div style="color:var(--text-muted);padding:18px;text-align:center;">No patients match your filters.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted);padding:18px;text-align:center;">No users match your filters.</div>';
   } else {
     const levelLabel = lvl => lvl === 'high' ? 'Severe' : lvl === 'moderate' ? 'Monitor' : 'Stable';
     const badgeCls = lvl => lvl === 'high' ? 'badge-high' : lvl === 'moderate' ? 'badge-moderate' : 'badge-low';
@@ -1128,9 +1148,9 @@ function renderClinicianRecords() {
   setText('clinician-active-meta', active ? `${active.age} · ${active.gender} · ${active.location}` : '—');
   setText('clinician-active-streak', active ? `${active.streak}d` : '—');
   setText('clinician-active-adherence', active ? `${active.adherence}%` : '—');
-  setText('clinician-live-alert-title', `Live Emergency Alert - ${active?.location || 'Selected'} Patient`);
-  setText('clinician-live-alert-copy', active?.liveAlertCopy || 'No active live alert for selected patient.');
-  setText('clinician-summary-patient', active?.code || active?.name || 'Patient');
+  setText('clinician-live-alert-title', `Live Emergency Alert - ${active?.location || 'Selected'} User`);
+  setText('clinician-live-alert-copy', active?.liveAlertCopy || 'No active live alert for selected user.');
+  setText('clinician-summary-patient', active?.code || active?.name || 'User');
   setText('clinician-voice-summary', active?.fullVoiceSummary || 'No latest voice summary.');
   setText('clinician-generated-at', `Generated: ${active?.summaryGeneratedAt || new Date().toLocaleString()}`);
   const moodLabels = (active?.moodHistory || []).map(pt => pt.day).join(' · ');
@@ -1219,7 +1239,7 @@ function renderClinicianRecords() {
 
   const pushStatus = document.getElementById('clinician-push-status');
   if (pushStatus) {
-    pushStatus.textContent = ui.pushSuccess ? '✅ Successfully pushed to patient app.' : 'No pending push.';
+    pushStatus.textContent = ui.pushSuccess ? '✅ Successfully pushed to user app.' : 'No pending push.';
     pushStatus.style.color = ui.pushSuccess ? 'var(--success)' : 'var(--text-muted)';
     pushStatus.style.fontWeight = ui.pushSuccess ? '700' : '500';
   }
@@ -1624,6 +1644,10 @@ function gad7Severity(score) {
 }
 
 function initScreeningPage() {
+  const phqContainer = document.getElementById('phq9-questions');
+  const gadContainer = document.getElementById('gad7-questions');
+  if (!phqContainer || !gadContainer) return;
+
   renderScreeningQuestions('phq9-questions', PHQ9_QUESTIONS, 'phq9');
   renderScreeningQuestions('gad7-questions', GAD7_QUESTIONS, 'gad7');
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Mental Compass — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence. Free & confidential counseling for patients, doctors, guardians." />
+  <meta name="description" content="Mental Compass — Privacy-first AI mental health companion with predictive analytics, voice biomarkers, and on-device intelligence. Free & confidential counseling for users, doctors, guardians." />
   <title>Mental Compass · AI Mental Health Copilot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -100,11 +100,7 @@
       </a>
     </nav>
 
-    <div class="sidebar-footer">
-      <div id="calm-mode-notice" class="calm-notice">WHO-aligned Calm UX: reduced choices and lower cognitive load.</div>
-      HIPAA · GDPR Compliant<br/>Ephemeral Edge Processing
-      <div style="margin-top:8px;font-size:10px;opacity:0.6;">Press number keys to switch tabs</div>
-    </div>
+    <div class="sidebar-footer"></div>
   </aside>
 
   <!-- ═══ Main Content ═══ -->
@@ -561,7 +557,7 @@
     <div class="screen" id="screen-screening">
       <div class="section-heading"><div><div class="section-title">Clinical Screening</div><div class="section-subtitle">Validated PHQ-9 Depression & GAD-7 Anxiety screening instruments</div></div></div>
       <div class="glass-card mb-24">
-        <div class="card-title">PHQ-9 · Patient Health Questionnaire</div>
+        <div class="card-title">PHQ-9 · Depression Questionnaire</div>
         <div class="card-subtitle">Over the last 2 weeks, how often have you been bothered by the following?</div>
         <div id="phq9-questions"></div>
         <div style="margin-top:16px;display:flex;align-items:center;gap:16px;">
@@ -613,9 +609,9 @@
 
       <div class="clinician-layout">
         <div class="glass-card clinician-master">
-          <div class="card-title">Patient Triage List</div>
+          <div class="card-title">User Triage List</div>
           <div class="card-subtitle">Search and filter by risk and assigned date</div>
-          <input class="text-area clinician-search" id="clinician-search" placeholder="Search patient by name or location" style="min-height:48px;resize:none;" />
+          <input class="text-area clinician-search" id="clinician-search" placeholder="Search user by name or location" style="min-height:48px;resize:none;" />
           <div class="clinician-filter-row" id="clinician-risk-filters" style="margin-top:10px;">
             <button class="chip active" data-risk="all">All</button>
             <button class="chip" data-risk="high" style="border-color:var(--danger);color:var(--danger);">Severe</button>
@@ -643,19 +639,19 @@
           </div>
 
           <div class="record-item clinician-live-alert" style="margin-top:14px;">
-            <div class="card-title" id="clinician-live-alert-title" style="font-size:16px;color:var(--danger);">Live Emergency Alert - Patient</div>
-            <div class="record-body" id="clinician-live-alert-copy">Patient A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.</div>
+            <div class="card-title" id="clinician-live-alert-title" style="font-size:16px;color:var(--danger);">Live Emergency Alert - User</div>
+            <div class="record-body" id="clinician-live-alert-copy">User A-2847 indicated high distress levels in latest voice check-in. AI summary flagged concerning language patterns.</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-              <button class="btn btn-danger" id="btn-contact-patient">Contact Patient Immediately</button>
+              <button class="btn btn-danger" id="btn-contact-patient">Contact User Immediately</button>
               <button class="btn btn-outline" id="btn-review-summary">Review Full Summary</button>
             </div>
           </div>
 
           <div class="record-item mb-24" id="clinician-summary-section">
-            <div class="card-title" style="font-size:18px;">Clinical Summary - <span id="clinician-summary-patient">Patient A-2847</span></div>
+            <div class="card-title" style="font-size:18px;">Clinical Summary - <span id="clinician-summary-patient">User A-2847</span></div>
             <div class="card-subtitle">Latest Voice Check-In Summary</div>
             <div class="record-body" id="clinician-voice-summary">
-              Patient reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: Patient is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. Patient expressed willingness to continue treatment and found breathing exercises helpful.
+              User reported increased anxiety related to work stress and social isolation. Mentioned difficulty sleeping (4-5 hours per night) and reduced appetite. Positive indicators: User is maintaining exercise routine and reached out to a friend this week. No suicidal ideation mentioned. Tone analysis suggests mild depression with anxiety features. User expressed willingness to continue treatment and found breathing exercises helpful.
             </div>
             <div style="margin-top:10px;font-size:12px;color:var(--text-muted);" id="clinician-generated-at">Generated: March 24, 2026 at 2:23 PM</div>
           </div>
@@ -721,15 +717,15 @@
               </div>
               <div>
                 <div class="form-label">Journal Prompt</div>
-                <input id="clinician-journal-prompt" class="text-area" style="min-height:48px;resize:none;" value="Enter a new milestone or task for the patient (e.g., Practice deep breathing for 10 minutes daily)" />
+                <input id="clinician-journal-prompt" class="text-area" style="min-height:48px;resize:none;" value="Enter a new milestone or task for the user (e.g., Practice deep breathing for 10 minutes daily)" />
               </div>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-              <button class="btn btn-primary" id="btn-push-patient">📤 Push to Patient's Mobile App</button>
+              <button class="btn btn-primary" id="btn-push-patient">📤 Push to User's Mobile App</button>
               <button class="btn btn-ghost" id="btn-save-draft">💾 Save as Draft</button>
               <div id="clinician-push-status" style="font-size:13px;color:var(--text-muted);">No pending push.</div>
             </div>
-            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">This milestone will instantly appear in the patient's "Milestones &amp; Rewards" section.</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">This milestone will instantly appear in the user's "Milestones &amp; Rewards" section.</div>
           </div>
 
           <div class="record-item">
@@ -739,7 +735,7 @@
               <div class="spec-item"><div class="spec-label">Voice Files Stored</div><div class="spec-value" style="color:var(--accent);">0 (None)</div></div>
               <div class="spec-item"><div class="spec-label">HIPAA Compliant</div><div class="spec-value" style="color:var(--success);">Verified</div></div>
             </div>
-            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">Security Confirmation: All incoming patient data is end-to-end encrypted. Biometric voice files are automatically deleted after text summary generation. Only clinical summaries are stored on secure servers. Last security audit: March 20, 2026.</div>
+            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">Security Confirmation: All incoming user data is end-to-end encrypted. Biometric voice files are automatically deleted after text summary generation. Only clinical summaries are stored on secure servers. Last security audit: March 20, 2026.</div>
           </div>
         </div>
       </div>
@@ -880,7 +876,7 @@
     <!-- ═══ TRIAGE LIST ═══ -->
     <div class="screen" id="screen-triage">
       <div class="section-heading">
-        <div><div class="section-title">🚦 Patient Triage List</div><div class="section-subtitle">Real-time risk stratification · Color-coded priority</div></div>
+        <div><div class="section-title">🚦 User Triage List</div><div class="section-subtitle">Real-time risk stratification · Color-coded priority</div></div>
         <div class="triage-filters" id="triage-filters">
           <button class="chip active" data-filter="all">All</button>
           <button class="chip" data-filter="severe" style="border-color:var(--danger);color:var(--danger);">🔴 Severe</button>

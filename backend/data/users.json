@@ -200,5 +200,29 @@
     "wearableConnected": false,
     "wearableEncryptedData": null,
     "doctorCode": null
+  },
+  {
+    "id": "2f57d5e4-274c-4d09-a4c4-8bb1a20ed7ca",
+    "anonymousId": null,
+    "email": "bishalg@gmail.com",
+    "password": "$2b$10$DjozYUZS09beDQkR2h67ye.C2Aowc3vRIpUgygtcxPKVhJonsMN9i",
+    "fullName": "Dr. Bishal Gyawali",
+    "role": "doctor",
+    "isActive": true,
+    "createdAt": "2026-03-29T10:10:21.857Z",
+    "createdBy": "352e2530-0a03-4e9e-8186-5715a1213e32",
+    "linkedPatientId": null,
+    "doctorType": "psychiatrist",
+    "phone": "",
+    "avatar": "🩺",
+    "consentGiven": false,
+    "consentAt": null,
+    "subscription": "pending",
+    "subscriptionStatus": "pending",
+    "paymentVerified": false,
+    "checkinSchedule": null,
+    "wearableConnected": false,
+    "wearableEncryptedData": null,
+    "doctorCode": "DR-EZZ4"
   }
 ]
