@@ -18,6 +18,116 @@
 
 ---
 
+## 📸 Product Screenshots
+
+> A walkthrough of the Mental Compass experience — from onboarding to clinical insights.
+
+### 🔐 Onboarding & Secure Access
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="Hackathon%20SS/Login.png" alt="Login Screen" width="100%" />
+      <br />
+      <sub><b>🔑 Login Screen</b></sub>
+      <br />
+      <sub>Secure JWT-based authentication with role-aware routing. Clean, minimal UI designed for distressed users.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="Hackathon%20SS/DashBoard.png" alt="Dashboard" width="100%" />
+      <br />
+      <sub><b>🏠 Patient Dashboard</b></sub>
+      <br />
+      <sub>Personalized analytics hub showing mood trends, streak tracking, and quick-action shortcuts.</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 📓 Core Patient Experience
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/Journal.png" alt="Journaling" width="100%" />
+      <br />
+      <sub><b>✍️ Journaling</b></sub>
+      <br />
+      <sub>Text, voice & wearable journal entries powered by AI sentiment analysis. Anonymous by default.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/EarlySupport.png" alt="Early Support" width="100%" />
+      <br />
+      <sub><b>🌱 Early Support Tools</b></sub>
+      <br />
+      <sub>CBT reframing, 4-4-4 breathing, and 5-4-3-2-1 grounding — AI-curated, never diagnostic.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/Consulation.png" alt="Consultation" width="100%" />
+      <br />
+      <sub><b>🩺 Doctor Consultation</b></sub>
+      <br />
+      <sub>Seamless booking flow with full patient anonymity preserved. Doctors see only <code>JRN-XXXX</code> IDs.</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 📊 Clinical Assessment Tools
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="Hackathon%20SS/PHQ-9%20Index.png" alt="PHQ-9 Depression Index" width="100%" />
+      <br />
+      <sub><b>📉 PHQ-9 Depression Screening</b></sub>
+      <br />
+      <sub>Standardized 9-item questionnaire mapped to severity scores. Used by doctors for triage prioritization.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="Hackathon%20SS/GAD7%20Index.png" alt="GAD-7 Anxiety Index" width="100%" />
+      <br />
+      <sub><b>😰 GAD-7 Anxiety Index</b></sub>
+      <br />
+      <sub>Generalized Anxiety Disorder 7-item scale for quantified clinical risk scoring and escalation routing.</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 🌐 Community, Scheduling & Learning
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/Anonymus%20Community.png" alt="Anonymous Community" width="100%" />
+      <br />
+      <sub><b>👥 Anonymous Community</b></sub>
+      <br />
+      <sub>Peer support forum where users share experiences without revealing identities — safe expression at scale.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/Sync%20and%20Schedule.png" alt="Sync and Schedule" width="100%" />
+      <br />
+      <sub><b>📅 Sync & Schedule</b></sub>
+      <br />
+      <sub>FCHV-managed check-in scheduling and calendar sync. Enables proxy care for rural, offline populations.</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="Hackathon%20SS/Learning%20and%20Podcasts.png" alt="Learning and Podcasts" width="100%" />
+      <br />
+      <sub><b>🎧 Learning & Podcasts</b></sub>
+      <br />
+      <sub>Curated mental wellness content, expert podcasts, and guided exercises surfaced by AI context.</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 💡 The Problem
 
 Mental health crises among students and professionals are at an all-time high due to career pressure, exam burnout, and financial uncertainty. However, in many communities (especially in South Asia), **stigma** prevents individuals from seeking help. 
