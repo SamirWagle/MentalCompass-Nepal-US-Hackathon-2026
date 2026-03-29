@@ -142,7 +142,7 @@ export function createUser({ email, password, fullName, role, doctorType, linked
     // Doctor monetization fields
     subscription: role === ROLES.DOCTOR ? 'pending' : null,
     subscriptionStatus: role === ROLES.DOCTOR ? 'pending' : null, // 'free'|'pending'|'active'
-    paymentVerified: false,
+    paymentVerified: true,
     // Patient: anonymous check-in schedule
     checkinSchedule: role === ROLES.PATIENT ? { hour: 20, minute: 0, timezone: 'Asia/Kathmandu' } : null,
     // Patient: wearable device connection
@@ -310,7 +310,7 @@ export function verifyDoctorPayment(doctorId, paymentRef) {
 export function listAvailableDoctors() {
   const users = readStore();
   return users
-    .filter(u => u.role === ROLES.DOCTOR && u.isActive && u.paymentVerified)
+    .filter(u => u.role === ROLES.DOCTOR && u.isActive)
     .map(u => ({
       doctorCode: u.doctorCode || 'DR-????',
       doctorType: u.doctorType || 'general',

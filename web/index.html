@@ -126,7 +126,7 @@
           <button class="btn btn-ghost topbar-btn" type="button" onclick="navigateToScreen('checkin')"><span class="material-symbols-rounded">event_note</span>Check-In</button>
           <button class="btn btn-outline topbar-btn" type="button" onclick="navigateToScreen('copilot')"><span class="material-symbols-rounded">chat</span>Talk to AI</button>
           <button class="btn btn-primary topbar-btn" type="button" onclick="navigateToScreen('support')"><span class="material-symbols-rounded">favorite</span>Early Support</button>
-          <button class="btn btn-danger topbar-btn" type="button" onclick="document.getElementById('btn-emergency-home')?.click()"><span class="material-symbols-rounded">emergency</span>SOS</button>
+          <button class="btn btn-danger topbar-btn sos-ambient" type="button" onclick="document.getElementById('btn-emergency-home')?.click()"><span class="material-symbols-rounded">emergency</span>SOS</button>
         </div>
       </header>
 
@@ -164,7 +164,7 @@
           </div>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-danger" id="btn-emergency-home" type="button">🚨 Emergency SOS</button>
+          <button class="btn btn-danger sos-ambient" id="btn-emergency-home" type="button">🚨 Emergency SOS</button>
           <span style="font-size:12px;color:var(--text-muted);align-self:center;">Urgent help request to care team</span>
         </div>
       </div>

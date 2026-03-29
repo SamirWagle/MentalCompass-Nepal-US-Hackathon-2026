@@ -242,5 +242,425 @@
     "createdAt": "2026-03-29T08:48:12.807Z",
     "declineNote": null,
     "checkinDecline": null
+  },
+  {
+    "id": "691cf47f-5a78-483e-809b-f289d888f9f5",
+    "journalId": "JE-MNBOCFPH-A1V1",
+    "userId": "b120f978-6a11-46e6-b09c-9a511824a082",
+    "anonymousId": "JRN-9K7D",
+    "type": "voice",
+    "content": "",
+    "audioUrl": "uploads/recorded-journal-2026-03-29T11-27-00-661Z.webm",
+    "audioMeta": {
+      "fileName": "recorded-journal-2026-03-29T11-27-00-661Z.webm",
+      "size": 27344,
+      "mimeType": "audio/webm;codecs=opus",
+      "durationSec": 2,
+      "capturedAt": "2026-03-29T11:27:00.661Z"
+    },
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 0,
+      "concernIndicators": 0,
+      "wordCount": 9,
+      "analyzedAt": "2026-03-29T11:27:00.666Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [
+          "neutral",
+          "medium",
+          "mood",
+          "energy"
+        ],
+        "cbtSuggestion": "Focus on observing your current feelings without judgment to increase mindfulness and emotional awareness."
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [
+        "neutral",
+        "medium",
+        "mood",
+        "energy"
+      ],
+      "cbtSuggestion": "Focus on observing your current feelings without judgment to increase mindfulness and emotional awareness."
+    },
+    "aiSummary": "Emotion trend: neutral. keywords: neutral, medium, mood, energy. micro-step: Focus on observing your current feelings without judgment to increase mindfulness and emotional awareness.",
+    "checklist": [],
+    "mcqAnswers": {
+      "mood": "neutral",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 0,
+        "concernIndicators": 0,
+        "wordCount": 9,
+        "analyzedAt": "2026-03-29T11:27:00.666Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [
+            "neutral",
+            "medium",
+            "mood",
+            "energy"
+          ],
+          "cbtSuggestion": "Focus on observing your current feelings without judgment to increase mindfulness and emotional awareness."
+        }
+      },
+      "suggestions": [
+        {
+          "title": "4-7-8 Breathing",
+          "desc": "Inhale 4s, hold 7s, exhale 8s — repeat 3 times",
+          "icon": "🫁"
+        },
+        {
+          "title": "Morning Yoga Flow",
+          "desc": "A gentle 10-minute sequence to start your day",
+          "icon": "🏃"
+        },
+        {
+          "title": "Building Supportive Connections",
+          "desc": "Reaching out doesn't have to be hard",
+          "icon": "🤝"
+        },
+        {
+          "title": "Lo-Fi Study Beats",
+          "desc": "Gentle background music for focus and calm",
+          "icon": "🎧"
+        }
+      ],
+      "generatedAt": "2026-03-29T11:27:02.793Z",
+      "message": "Thank you for journaling today. Every entry is a step forward. 🌱"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T11:27:02.789Z",
+    "declineNote": null,
+    "checkinDecline": null
+  },
+  {
+    "id": "7b1b2043-8c9a-4729-bfb7-12983fd8884c",
+    "journalId": "JE-MNBPZIN4-SX82",
+    "userId": "b120f978-6a11-46e6-b09c-9a511824a082",
+    "anonymousId": "JRN-9K7D",
+    "type": "voice",
+    "content": "",
+    "audioUrl": "uploads/recorded-journal-2026-03-29T12-12-56-143Z.webm",
+    "audioMeta": {
+      "fileName": "recorded-journal-2026-03-29T12-12-56-143Z.webm",
+      "size": 26378,
+      "mimeType": "audio/webm;codecs=opus",
+      "durationSec": 2,
+      "capturedAt": "2026-03-29T12:12:56.143Z"
+    },
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 0,
+      "concernIndicators": 0,
+      "wordCount": 9,
+      "analyzedAt": "2026-03-29T12:12:56.145Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [
+          "neutral",
+          "medium",
+          "mood",
+          "energy"
+        ],
+        "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain balanced mood and energy."
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [
+        "neutral",
+        "medium",
+        "mood",
+        "energy"
+      ],
+      "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain balanced mood and energy."
+    },
+    "aiSummary": "Emotion trend: neutral. keywords: neutral, medium, mood, energy. micro-step: Practice mindful breathing for 2 minutes to maintain balanced mood and energy.",
+    "checklist": [],
+    "mcqAnswers": {
+      "mood": "neutral",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 0,
+        "concernIndicators": 0,
+        "wordCount": 9,
+        "analyzedAt": "2026-03-29T12:12:56.145Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [
+            "neutral",
+            "medium",
+            "mood",
+            "energy"
+          ],
+          "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain balanced mood and energy."
+        }
+      },
+      "suggestions": [
+        {
+          "title": "5-Minute Calm Down",
+          "desc": "Slow, deep breaths with gentle counting",
+          "icon": "🌬️"
+        },
+        {
+          "title": "Stretch at Your Desk",
+          "desc": "5 simple stretches to release tension",
+          "icon": "🧘"
+        },
+        {
+          "title": "Understanding Your Emotions",
+          "desc": "A short guide to recognizing what you feel",
+          "icon": "📖"
+        },
+        {
+          "title": "Sleep Soundscapes",
+          "desc": "Drift off with soothing nighttime sounds",
+          "icon": "🌙"
+        }
+      ],
+      "generatedAt": "2026-03-29T12:12:59.297Z",
+      "message": "Thank you for journaling today. Every entry is a step forward. 🌱"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T12:12:59.296Z",
+    "declineNote": null,
+    "checkinDecline": null
+  },
+  {
+    "id": "aa01d6d5-3224-49f1-bc7d-c3308647864f",
+    "journalId": "JE-MNBR7GE3-UEHY",
+    "userId": "b120f978-6a11-46e6-b09c-9a511824a082",
+    "anonymousId": "JRN-9K7D",
+    "type": "voice",
+    "content": "",
+    "audioUrl": "uploads/recorded-journal-2026-03-29T12-47-06-168Z.webm",
+    "audioMeta": {
+      "fileName": "recorded-journal-2026-03-29T12-47-06-168Z.webm",
+      "size": 38936,
+      "mimeType": "audio/webm;codecs=opus",
+      "durationSec": 2,
+      "capturedAt": "2026-03-29T12:47:06.169Z"
+    },
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 0,
+      "concernIndicators": 0,
+      "wordCount": 9,
+      "analyzedAt": "2026-03-29T12:47:06.175Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [
+          "neutral",
+          "medium",
+          "mood",
+          "energy"
+        ],
+        "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [
+        "neutral",
+        "medium",
+        "mood",
+        "energy"
+      ],
+      "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+    },
+    "aiSummary": "Emotion trend: neutral. keywords: neutral, medium, mood, energy. micro-step: Practice mindful breathing for 2 minutes to maintain your balanced mood.",
+    "checklist": [],
+    "mcqAnswers": {
+      "mood": "neutral",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 0,
+        "concernIndicators": 0,
+        "wordCount": 9,
+        "analyzedAt": "2026-03-29T12:47:06.175Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [
+            "neutral",
+            "medium",
+            "mood",
+            "energy"
+          ],
+          "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood."
+        }
+      },
+      "suggestions": [
+        {
+          "title": "4-7-8 Breathing",
+          "desc": "Inhale 4s, hold 7s, exhale 8s — repeat 3 times",
+          "icon": "🫁"
+        },
+        {
+          "title": "Morning Yoga Flow",
+          "desc": "A gentle 10-minute sequence to start your day",
+          "icon": "🏃"
+        },
+        {
+          "title": "5 Simple Grounding Techniques",
+          "desc": "Quick exercises when things feel overwhelming",
+          "icon": "📝"
+        },
+        {
+          "title": "Nature Sounds",
+          "desc": "Rain, ocean waves, and forest ambience for relaxation",
+          "icon": "🌊"
+        }
+      ],
+      "generatedAt": "2026-03-29T12:47:09.245Z",
+      "message": "Taking time to reflect shows real strength. You're doing well. 🌿"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T12:47:09.243Z",
+    "declineNote": null,
+    "checkinDecline": null
+  },
+  {
+    "id": "8e0ab036-59aa-4c6f-8818-cf08603f9e8d",
+    "journalId": "JE-MNBRCCLM-JD7D",
+    "userId": "b120f978-6a11-46e6-b09c-9a511824a082",
+    "anonymousId": "JRN-9K7D",
+    "type": "voice",
+    "content": "",
+    "audioUrl": "uploads/recorded-journal-2026-03-29T12-50-54-852Z.webm",
+    "audioMeta": {
+      "fileName": "recorded-journal-2026-03-29T12-50-54-852Z.webm",
+      "size": 47630,
+      "mimeType": "audio/webm;codecs=opus",
+      "durationSec": 3,
+      "capturedAt": "2026-03-29T12:50:54.852Z"
+    },
+    "videoMeta": null,
+    "voiceMetrics": null,
+    "wearableData": null,
+    "wearablePhi": null,
+    "sentiment": {
+      "score": 50,
+      "level": "neutral",
+      "positiveIndicators": 0,
+      "concernIndicators": 0,
+      "wordCount": 9,
+      "analyzedAt": "2026-03-29T12:50:54.855Z",
+      "llm": {
+        "emotion": "neutral",
+        "sentiment": 0,
+        "keywords": [
+          "neutral",
+          "medium",
+          "mood",
+          "energy"
+        ],
+        "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood and energy."
+      }
+    },
+    "llmAnalysis": {
+      "emotion": "neutral",
+      "sentiment": 0,
+      "keywords": [
+        "neutral",
+        "medium",
+        "mood",
+        "energy"
+      ],
+      "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood and energy."
+    },
+    "aiSummary": "Emotion trend: neutral. keywords: neutral, medium, mood, energy. micro-step: Practice mindful breathing for 2 minutes to maintain your balanced mood and energy.",
+    "checklist": [],
+    "mcqAnswers": {
+      "mood": "neutral",
+      "energy": "medium"
+    },
+    "aiSuggestions": {
+      "sentiment": {
+        "score": 50,
+        "level": "neutral",
+        "positiveIndicators": 0,
+        "concernIndicators": 0,
+        "wordCount": 9,
+        "analyzedAt": "2026-03-29T12:50:54.855Z",
+        "llm": {
+          "emotion": "neutral",
+          "sentiment": 0,
+          "keywords": [
+            "neutral",
+            "medium",
+            "mood",
+            "energy"
+          ],
+          "cbtSuggestion": "Practice mindful breathing for 2 minutes to maintain your balanced mood and energy."
+        }
+      },
+      "suggestions": [
+        {
+          "title": "5-Minute Calm Down",
+          "desc": "Slow, deep breaths with gentle counting",
+          "icon": "🌬️"
+        },
+        {
+          "title": "Dance for 3 Minutes",
+          "desc": "Put on your favorite song and move your body",
+          "icon": "💃"
+        },
+        {
+          "title": "Sleep Hygiene Basics",
+          "desc": "Simple tips for better rest tonight",
+          "icon": "😴"
+        },
+        {
+          "title": "Calm Piano Playlist",
+          "desc": "Soft instrumental tracks to help you unwind",
+          "icon": "🎵"
+        }
+      ],
+      "generatedAt": "2026-03-29T12:50:57.612Z",
+      "message": "Some days are tougher than others — and that's completely okay. 💚"
+    },
+    "doctorAssessments": [],
+    "createdAt": "2026-03-29T12:50:57.610Z",
+    "declineNote": null,
+    "checkinDecline": null
   }
 ]

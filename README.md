@@ -1,160 +1,117 @@
+<div align="center">
+
+# 🧭 Mental Compass 
+### AI Mental Health Copilot & Anonymous Care Pipeline
+
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-orange?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Security-HIPAA%20%7C%20GDPR-green?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Architecture-Zero--Trust-critical?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-purple?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/IAM-Role%20Based-yellow?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue?style=for-the-badge&logo=apple" />
+  <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-orange?style=for-the-badge&logo=microsoft-azure" />
+  <img src="https://img.shields.io/badge/Security-HIPAA%20%7C%20GDPR-green?style=for-the-badge&logo=spring-security" />
+  <img src="https://img.shields.io/badge/Architecture-Zero--Trust-critical?style=for-the-badge&logo=cloudflare" />
+  <img src="https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-purple?style=for-the-badge&logo=w3c" />
 </p>
 
-# Mental Compass - AI Mental Health Copilot
+**Built for the Nepal-US Hackathon 2026** 🏆  
+*Bridging the gap between mental health stigma and professional care through AI, anonymity, and community.*
 
-A journaling-first mental health platform with an anonymous pipeline connecting patients, doctors, and community health volunteers. Users journal daily; doctors review anonymized data; AI provides gentle habit suggestions — never diagnoses.
-
-Built for Nepal-US Hackathon 2026:
-- Reduce career pressure, burnout, and uncertainty for students and professionals.
-- Lower stigma and improve early support in conservative communities.
-- Digitize community health volunteer door-to-door screening.
-- Provide free, confidential counseling services (MIT Health–inspired).
+</div>
 
 ---
 
-## What Is Implemented
+## 💡 The Problem
 
-### Core Platform
-- Cross-platform experience:
-  - **Mobile app** (Expo React Native, 13 screens).
-  - **Web app** (single-page app with calm/full UX modes and 20+ views).
-  - **Backend API** (Express + Azure OpenAI integration + local JSON persistence).
+Mental health crises among students and professionals are at an all-time high due to career pressure, exam burnout, and financial uncertainty. However, in many communities (especially in South Asia), **stigma** prevents individuals from seeking help. 
+- People are afraid of being labeled.
+- Access to certified psychologists is limited outside urban centers.
+- Rural areas lack internet infrastructure, leaving localized communities behind.
+- Existing tools diagnose unethically, violating user trust.
 
-### Identity & Access Management (IAM)
-- **Super Admin–controlled IAM system** — only super admin (and CHVs for patients) can create accounts.
-- **Role-based access control (RBAC)** with 5 user types:
-  - 🛡️ **Super Admin** — Full system access, user management, compliance, doctor verification.
-  - 🩺 **Doctor** (psychiatrist, psychologist, general) — Reads anonymized journals by ID, rates conditions, consults. **Pays to onboard.**
-  - 🧑 **Patient** — Daily journaling (text/voice/wearable), receives AI habit suggestions, opts into doctor consultation. **Pays on consult only.**
-  - 👨‍👩‍👧 **Guardian** — Read-only linked patient monitoring, alerts, care team contact.
-  - 👩‍⚕️ **FCHV/CHV (Community Health Volunteer)** — Mini Admin for low-connectivity/offline communities: creates patient accounts and performs updates/check-ins/journal capture on behalf of managed patients.
-- **Anonymous IDs** — Patients get `JRN-XXXX` format IDs. Doctors NEVER see real names.
-- **JWT authentication** with secure bcrypt password hashing.
+## 🚀 The Solution: Mental Compass
 
-### Journaling System (Core Product)
-- **Multi-input journaling**: text, audio, video, wearable data, scheduled calls.
-- **AI sentiment analysis** on each entry (Azure OpenAI with local fallback).
-- **AI gentle suggestions**: music, articles, exercises, breathing — **NEVER diagnoses**.
-- **Doctor anonymous reader**: views journals by anonymous ID, rates depression/stress/anxiety.
-- **Decline detection**: AI monitors 1-month patterns and gently asks "Would you like to meet a doctor?"
-- **Right to reject**: Patient can decline consultation — reason tracked but respected.
-- **FCHV proxy capture**: field worker can submit journals/check-ins on behalf of patients with no smartphone access.
+**Mental Compass** is a journaling-first platform with a secure, **anonymous pipeline** connecting patients, doctors, and Female Community Health Volunteers (FCHVs). 
 
-### Counseling Services (MIT Health–Inspired)
-- **Individual therapy** sessions with licensed therapists.
-- **Group therapy** with peer support and professional facilitation.
-- **Medication management** with psychiatric evaluation support.
-- **Urgent care** for immediate mental health crisis support.
-- **Virtual appointments** via secure video, messaging, and phone.
-- **Service categories**: Stress & Anxiety, Relationships, Academic Issues, Mental Health.
-- **Care team profiles** with speciality listings and booking.
-
-### Accessibility & Design Standards (WCAG 2.2 AA)
-- ♿ **Skip navigation** link for keyboard users.
-- 🎯 **Focus indicators** (3px solid outline) on all interactive elements.
-- 📐 **Touch targets** ≥ 44×44 CSS pixels for buttons and inputs.
-- 🎨 **Color contrast** ≥ 4.5:1 for all text/background combinations.
-- 🏷️ **Semantic HTML** (`<nav>`, `<main>`, `<form>`, `<label>`, `role` attributes).
-- 📢 **ARIA live regions** for dynamic error messages and alerts.
-- 🔇 **Reduced motion support** (`prefers-reduced-motion` media query).
-- 📱 **Fully responsive** — mobile, tablet, and desktop layouts.
-- 🍔 **Mobile hamburger menu** with auto-close on navigation.
-
-### Problem-Statement Features
-- **Career Compass**: 72-hour action-plan builder for exam/job/performance/financial uncertainty.
-- **Early Support Pathway**: stigma-safe progressive ladder (self → peer → family → counselor → emergency).
-- **Daily check-in** captures career pressure dimensions:
-  - roleContext, deadlinePressure, roleUncertainty
-  - financialStress, belongingSafety, stigmaSafePreferred, trustedContact
-
-### Backend Intelligence
-- Risk scoring includes career pressure and uncertainty factors.
-- Context-aware interventions use payload-aware planning.
-- API responses use structured envelope:
-  - `ok`, `data`, `meta`, `error` (for failures)
+1. **Users Journal Freely:** Users log feelings via text, voice, or wearables.
+2. **AI Acts as a Copilot, Not a Doctor:** Our Azure OpenAI agent provides gentle habit suggestions (breathing, CBT reframing, grounding)—*it never diagnoses*.
+3. **True Anonymity:** Doctors review data through proxy IDs (`JRN-XXXX`). They can assess the aggregated data and offer care without ever knowing the patient's real name.
+4. **Community Power:** FCHVs act as "Mini Admins" in low-bandwidth areas, capturing check-ins manually for those without smartphone access.
 
 ---
 
-## Architecture Overview
+## ✨ Why Mental Compass Wins
 
-### Frontend Mobile
-- React Native + Expo SDK 51
-- TypeScript
-- AsyncStorage and UI token system
+### 1. 🛡️ The "Zero-Trust" Anonymous Pipeline
+Patients are assigned anonymous IDs (`JRN-XXXX`). Doctors pay a subscription to access the platform. When a doctor reviews a journal, they rate the symptoms and provide notes—while the patient remains 100% anonymous until *they* consent to a consultation.
 
-### Frontend Web
-- HTML/CSS/Vanilla JS with Inter (Google Fonts) typography
-- Calm mode for lower cognitive load (WHO-aligned)
-- Full mode for advanced analytics and clinician workflows
-- IAM: role-based navigation injection and screen rendering
-- FCHV role is intentionally simplified to show only FCHV-required workflows
+### 2. 🧠 Ethical AI (The Anti-Diagnosis Engine)
+Most "AI mental health" apps try to play doctor. Mental Compass uses AI strictly to:
+- Detect decline patterns over a 30-day window.
+- Suggest somatic interventions (4-4-4 breathing, 5-4-3-2-1 grounding, CBT thought reframing).
+- Ask gently: *"Would you like to meet a doctor?"*
 
-### Backend
-- Node.js + Express (ES modules)
-- Azure OpenAI for chat/summary/sentiment
-- Local file stores for check-ins, escalations, and users
-- JWT auth with bcrypt password hashing
-- Role-based middleware (`requireAuth`, `requireRole`)
+### 3. 👩‍⚕️ FCHV / CHV Proxy Capture
+We digitize the doorstep. Community Health Volunteers can create accounts, log data, and manage schedules *on behalf* of rural patients who do not own smartphones, bridging the rural-urban digital divide.
 
-### Security Model
-- AES-256-GCM payload encryption support
-- SHA-256 audit hashes
-- Ephemeral raw-audio handling flow
-- JWT with 24h expiry and secure token management
+### 4. 🎛️ Dynamic UI Modes (Cognitive Load Management)
+- **Calm Mode:** Minimal constraints, reduced stimulation, and soft branding designed for users in active distress (WHO-aligned).
+- **Full Mode:** Advanced analytics, triage metrics, and specialized graphs for clinicians and researchers.
 
 ---
 
-## Project Structure
+## 🛠️ Features Breakdown
 
-```text
-Nepal-US-Hackathon-2026/
-├── backend/
-│   ├── .env.example
-│   ├── package.json
-│   ├── data/
-│   │   ├── checkins.json
-│   │   ├── escalations.json
-│   │   ├── journals.json          ← Journal entries (anonymous pipeline)
-│   │   └── users.json             ← IAM user store (with anonymousIds)
-│   └── src/
-│       ├── index.js                ← Express app + all API routes
-│       ├── lib/
-│       │   ├── auth.js             ← JWT + RBAC middleware
-│       │   ├── gemini.js           ← Azure OpenAI integration helpers
-│       │   ├── insights.js
-│       │   ├── interventions.js
-│       │   ├── scoring.js
-│       │   ├── security.js
-│       │   ├── suggestions.js      ← AI gentle suggestion engine
-│       │   └── transport.js
-│       └── store/
-│           ├── checkinStore.js
-│           ├── escalationStore.js
-│           ├── journalStore.js     ← Journal CRUD + anonymous reader
-│           └── userStore.js        ← User CRUD + CHV + anonymous IDs
-├── frontend/
-│   └── ... (Expo React Native)
-├── scripts/
-│   └── seed_demo.py               ← Python sample data generator
-├── web/
-│   ├── app.js
-│   ├── features.js
-│   ├── iam.js                      ← Login + admin panel + counseling
-│   ├── index.html
-│   └── styles.css
-└── README.md
+### Role-Based Access Control (RBAC)
+- 🛡️ **Super Admin** — Full system access, data governance.
+- 🩺 **Doctor** — Accesses anonymized journals, scores risk, manages a priority queue.
+- 🧑 **Patient** — Habit building, journaling, analytics, secure consultations.
+- 👨‍👩‍👧 **Guardian** — Read-only emergency monitoring & safety-net linking.
+- 👩‍⚕️ **FCHV (Volunteer)** — Proxy data entry for unconnected populations.
+
+### Intervention Toolkits (Fully Interactive)
+- **5-4-3-2-1 Grounding:** Guided sensory reality anchoring.
+- **CBT Thought Reframe:** Worry to evidence-based balanced thinking.
+- **4-4-4 Breathing:** Visual breathing metronome. 
+
+### Risk & Escalation Engine
+- **Decline Detection:** Monitors text/voice sentiment shifts.
+- **SOS Escalation:** Immediate 1-click distress path with automatic routing to Care Team / Guardians.
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+```mermaid
+graph TD;
+    Patient/CHV-->|REST/HTTPS|API;
+    API-->|Encrypted|Database;
+    API-->|Prompt/Guardrails|Azure[Azure OpenAI];
+    Azure-->|Sentiment/Intervention|API;
+    API-->|Anonymized|Doctor;
 ```
 
+**Frontend:**
+- **Web:** Vanilla JS, HTML5, CSS3 Custom Properties (No bloat, blazing fast).
+- **Mobile (Ready):** React Native + Expo SDK 51.
+- **Design:** WCAG 2.2 AA compliant, fluid responsive scaling, modular components.
+
+**Backend:**
+- **Server:** Node.js + Express (ES Modules).
+- **AI:** Azure OpenAI integration (Sentiment, entity extraction).
+- **Identity:** JWT authentication + Bcrypt hashing.
+- **Data:** Local JSON persistence (easily scalable to Postgres/MongoDB).
+
 ---
 
-## Quick Start
+## 🤝 Social & Business Impact
+
+**The Business Model:**
+- **Doctors Pay:** Subscription fee to access anonymized queues and build their digital practice.
+- **Patients Enjoy for Free:** Journaling and AI tools are forever free. They only pay standard consultation rates if they *choose* to book a doctor.
+- **B2B / B2G:** Licensing the FCHV proxy system to government health bodies and INGOs.
+
+---
+
+## 💻 Quick Start & Demo
+
 
 ### Prerequisites
 - Node.js 18+

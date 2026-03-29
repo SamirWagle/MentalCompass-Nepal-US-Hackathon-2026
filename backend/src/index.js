@@ -1115,7 +1115,7 @@ app.post("/api/appointments", requireAuth, requireRole(ROLES.PATIENT), (req, res
     const { doctorCode, scheduledAt } = req.body || {};
     if (!doctorCode) return sendError(req, res, 400, "MISSING_FIELDS", "doctorCode is required.");
     const allDoctors = listUsers(ROLES.DOCTOR);
-    const doctor = allDoctors.find(u => u.doctorCode === doctorCode && u.paymentVerified);
+    const doctor = allDoctors.find(u => u.doctorCode === doctorCode);
     if (!doctor) return sendError(req, res, 404, "DOCTOR_NOT_FOUND", "Doctor not found or not available.");
     const appointment = createAppointment({
       anonymousPatientId: req.user.anonymousId,

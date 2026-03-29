@@ -907,11 +907,19 @@ body.ux-calm .nav-item {
   background: linear-gradient(135deg, var(--danger), #f87171);
   color: #fff; 
   box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25);
+  animation: dangerPulse 2s infinite ease-in-out;
+}
+
+@keyframes dangerPulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .btn-danger:hover { 
   box-shadow: 0 12px 28px rgba(239, 68, 68, 0.3);
   transform: translateY(-2px);
+  animation: none; /* Pause animation on hover */
 }
 
 /* Outline Button: Subtle */

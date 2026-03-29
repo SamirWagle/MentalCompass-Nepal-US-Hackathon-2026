@@ -15,7 +15,8 @@
     "avatar": "🛡️",
     "consentGiven": true,
     "consentAt": "2026-03-28T15:05:57.722Z",
-    "subscription": null
+    "subscription": null,
+    "paymentVerified": true
   },
   {
     "id": "1fc25a68-885e-4e89-80ff-a24a40402784",
@@ -35,7 +36,7 @@
     "consentAt": null,
     "subscription": "pending",
     "subscriptionStatus": "pending",
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": null,
     "wearableConnected": false,
     "wearableEncryptedData": null,
@@ -59,7 +60,7 @@
     "consentAt": "2026-03-28T16:13:13.095Z",
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": {
       "hour": 20,
       "minute": 0,
@@ -87,7 +88,7 @@
     "consentAt": null,
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": null,
     "wearableConnected": false,
     "wearableEncryptedData": null,
@@ -111,7 +112,7 @@
     "consentAt": "2026-03-29T05:52:23.032Z",
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": {
       "hour": 20,
       "minute": 0,
@@ -124,30 +125,6 @@
       "authTag": "m2nGCHuZfstAJ2WkWUTYiA=="
     },
     "doctorCode": null
-  },
-  {
-    "id": "e3cdbb64-78d7-471f-9f15-9ab114fad228",
-    "anonymousId": null,
-    "email": "gandu2@gandu2.com",
-    "password": "$2b$10$UrpqMVrTFtQCEPEP8.MPmOFMpwBeFhwj31vP/AwPUgd/gBURSJ13a",
-    "fullName": "gandu2",
-    "role": "doctor",
-    "isActive": true,
-    "createdAt": "2026-03-29T05:52:38.354Z",
-    "createdBy": "352e2530-0a03-4e9e-8186-5715a1213e32",
-    "linkedPatientId": null,
-    "doctorType": "psychiatrist",
-    "phone": "",
-    "avatar": "🩺",
-    "consentGiven": false,
-    "consentAt": null,
-    "subscription": "pending",
-    "subscriptionStatus": "pending",
-    "paymentVerified": false,
-    "checkinSchedule": null,
-    "wearableConnected": false,
-    "wearableEncryptedData": null,
-    "doctorCode": "DR-K8HL"
   },
   {
     "id": "5f07547c-3df5-48dc-a12c-e33c1cfe0cfb",
@@ -167,7 +144,7 @@
     "consentAt": null,
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": null,
     "wearableConnected": false,
     "wearableEncryptedData": null,
@@ -191,7 +168,7 @@
     "consentAt": "2026-03-29T08:42:11.985Z",
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": {
       "hour": 20,
       "minute": 0,
@@ -219,7 +196,7 @@
     "consentAt": null,
     "subscription": "pending",
     "subscriptionStatus": "pending",
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": null,
     "wearableConnected": false,
     "wearableEncryptedData": null,
@@ -243,7 +220,7 @@
     "consentAt": "2026-03-29T10:15:19.888Z",
     "subscription": null,
     "subscriptionStatus": null,
-    "paymentVerified": false,
+    "paymentVerified": true,
     "checkinSchedule": {
       "hour": 20,
       "minute": 0,

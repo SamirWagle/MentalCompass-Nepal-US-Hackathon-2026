@@ -1965,6 +1965,155 @@ function finishBreathing() {
 }
 
 // ═══════════════════════════════════════════════
+// FEATURE: 5-4-3-2-1 Grounding Exercise
+// ═══════════════════════════════════════════════
+
+let groundingStep = 0;
+const groundingSteps = [
+  { num: 5, prompt: 'Name 5 things you can SEE around you.', placeholder: 'E.g., a lamp, a wall, a tree...' },
+  { num: 4, prompt: 'Name 4 things you can TOUCH.', placeholder: 'E.g., fabric, floor, your skin...' },
+  { num: 3, prompt: 'Name 3 things you can HEAR.', placeholder: 'E.g., traffic, birds, air conditioning...' },
+  { num: 2, prompt: 'Name 2 things you can SMELL.', placeholder: 'E.g., coffee, fresh air...' },
+  { num: 1, prompt: 'Name 1 thing you can TASTE.', placeholder: 'E.g., mint, salt, water...' }
+];
+
+function openGroundingModal() {
+  document.getElementById('grounding-modal').style.display = 'flex';
+  groundingStep = 0;
+  resetGroundingStep();
+}
+
+function closeGroundingModal() {
+  document.getElementById('grounding-modal').style.display = 'none';
+  groundingStep = 0;
+}
+
+function resetGroundingStep() {
+  const step = groundingSteps[groundingStep];
+  document.getElementById('grounding-step-chip').textContent = `Step ${groundingStep + 1} of 5`;
+  document.getElementById('grounding-prompt').textContent = step.prompt;
+  document.getElementById('grounding-input').placeholder = step.placeholder;
+  document.getElementById('grounding-input').value = '';
+  document.getElementById('grounding-progress').style.width = `${((groundingStep + 1) / 5) * 100}%`;
+  
+  const startBtn = document.getElementById('btn-grounding-start');
+  const nextBtn = document.getElementById('btn-grounding-next');
+  
+  if (groundingStep === 0) {
+    startBtn.style.display = 'inline-flex';
+    nextBtn.style.display = 'none';
+  } else {
+    startBtn.style.display = 'none';
+    nextBtn.style.display = 'inline-flex';
+  }
+}
+
+function nextGroundingStep() {
+  groundingStep++;
+  if (groundingStep >= groundingSteps.length) {
+    finishGrounding();
+    return;
+  }
+  resetGroundingStep();
+}
+
+function finishGrounding() {
+  const modal = document.getElementById('grounding-modal');
+  const body = modal.querySelector('.intervention-body');
+  body.innerHTML = `
+    <div style="text-align:center;padding:40px;">
+      <div style="font-size:64px;margin-bottom:20px;animation:avatarBob 3s ease-in-out;">✨</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent);margin-bottom:16px;">Grounding Complete!</div>
+      <div style="font-size:16px;color:var(--text-secondary);margin-bottom:24px;max-width:400px;">
+        You've engaged all 5 senses. You're here, present, and safe. Well done!
+      </div>
+      <button class="btn btn-primary" onclick="closeGroundingModal()">Close Exercise</button>
+    </div>
+  `;
+  state.avatarXp = Math.min(state.avatarXp + 8, 100);
+  updateDashboard();
+  showToast('🖐️ Grounding exercise complete — +8 XP earned');
+  setTimeout(() => {
+    closeGroundingModal();
+    openGroundingModal();
+  }, 3000);
+}
+
+// Add event listener for grounding start button
+if (document.getElementById('btn-grounding-start')) {
+  document.getElementById('btn-grounding-start').addEventListener('click', function() {
+    const input = document.getElementById('grounding-input').value.trim();
+    if (!input) {
+      showToast('Please write something first');
+      return;
+    }
+    nextGroundingStep();
+  });
+}
+
+if (document.getElementById('btn-grounding-next')) {
+  document.getElementById('btn-grounding-next').addEventListener('click', function() {
+    const input = document.getElementById('grounding-input').value.trim();
+    if (!input) {
+      showToast('Please write something first');
+      return;
+    }
+    nextGroundingStep();
+  });
+}
+
+// ═══════════════════════════════════════════════
+// FEATURE: CBT Thought Reframe Exercise
+// ═══════════════════════════════════════════════
+
+function openCbtModal() {
+  document.getElementById('cbt-modal').style.display = 'flex';
+  document.getElementById('cbt-worry').value = '';
+  document.getElementById('cbt-for').value = '';
+  document.getElementById('cbt-against').value = '';
+  document.getElementById('cbt-balanced').value = '';
+  document.getElementById('cbt-result').style.display = 'none';
+}
+
+function closeCbtModal() {
+  document.getElementById('cbt-modal').style.display = 'none';
+}
+
+function submitCBTReframe() {
+  const worry = document.getElementById('cbt-worry').value.trim();
+  const balanced = document.getElementById('cbt-balanced').value.trim();
+  
+  if (!worry) {
+    showToast('Please describe the worry thought');
+    return;
+  }
+  
+  if (!balanced) {
+    showToast('Please write a balanced reframe');
+    return;
+  }
+  
+  const resultEl = document.getElementById('cbt-result');
+  const resultText = document.getElementById('cbt-result-text');
+  
+  resultText.textContent = `Original: "${worry}"\n\nReframed: "${balanced}"`;
+  resultEl.style.display = 'block';
+  
+  state.avatarXp = Math.min(state.avatarXp + 10, 100);
+  updateDashboard();
+  showToast('🧠 CBT reframe complete — +10 XP earned');
+  
+  setTimeout(() => {
+    alert('Great cognitive work! This reframe will help you manage anxious thoughts. Write this down for future reference.');
+  }, 500);
+}
+
+// Add event listener for CBT submit button
+if (document.getElementById('btn-cbt-submit')) {
+  document.getElementById('btn-cbt-submit').addEventListener('click', submitCBTReframe);
+}
+
+// ═══════════════════════════════════════════════
 // FEATURE: PDF Clinical Report Export
 // ═══════════════════════════════════════════════
 
