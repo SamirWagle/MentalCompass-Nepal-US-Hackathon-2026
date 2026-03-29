@@ -8,3 +8,23 @@
 [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
 [32m[nodemon] starting `node src/index.js`[39m
 [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)

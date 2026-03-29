@@ -6,8 +6,23 @@ import { v4 as uuidv4 } from 'uuid';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORE_PATH = path.resolve(__dirname, '../../data/appointments.json');
+const isServerlessRuntime = process.env.VERCEL === '1' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+let memoryAppointments = [];
+
+function canUseFileStore() {
+  if (isServerlessRuntime) return false;
+  try {
+    const storeDir = path.dirname(STORE_PATH);
+    if (!fs.existsSync(storeDir)) fs.mkdirSync(storeDir, { recursive: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function readStore() {
+  const hasFileStore = canUseFileStore();
+  if (!hasFileStore) return memoryAppointments;
   try {
     if (!fs.existsSync(STORE_PATH)) {
       fs.writeFileSync(STORE_PATH, '[]', 'utf-8');
@@ -15,12 +30,21 @@ function readStore() {
     }
     return JSON.parse(fs.readFileSync(STORE_PATH, 'utf-8'));
   } catch {
-    return [];
+    return memoryAppointments;
   }
 }
 
 function writeStore(data) {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  const hasFileStore = canUseFileStore();
+  if (!hasFileStore) {
+    memoryAppointments = data;
+    return;
+  }
+  try {
+    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    memoryAppointments = data;
+  }
 }
 
 export const APPOINTMENT_STATUS = {
