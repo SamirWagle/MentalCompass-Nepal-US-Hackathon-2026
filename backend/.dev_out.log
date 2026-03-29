@@ -1,0 +1,54 @@
+
+> aegisspeak-backend@0.1.0 dev
+> nodemon --watch src src/index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): src\**\*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node src/index.js`[39m
+Serving static frontend from: C:\Users\samir\Desktop\Nepal-US-Hackathon-2026\web
+AegisSpeak backend listening on :4000
+AI mode: Template fallback
+IAM: Super admin seeded (admin@aegisspeak.com)
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting child process[39m
+[32m[nodemon] starting `node src/index.js`[39m
+Serving static frontend from: C:\Users\samir\Desktop\Nepal-US-Hackathon-2026\frontend\web-build
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
