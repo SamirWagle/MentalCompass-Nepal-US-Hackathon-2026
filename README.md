@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧭 Mental Compass 
+# 🧭 NepMED: Mental Health Platform
 ### AI Mental Health Copilot & Anonymous Care Pipeline
 
 <p align="center">
@@ -382,6 +382,19 @@ Notes:
   - Update patient profile and check-in schedule on behalf
   - Save proxy journal entry
   - Submit proxy check-in
+
+---
+
+## 👥 Team: Mental Compass
+
+**Product:** NepMED: Mental Health Platform
+
+**Team Members:**
+- Abiral Adhikari
+- Reewaj Khanal
+- Samikshya Upadaya
+- Samir Wagle
+- Shayana Tiwari
 
 ---
 
