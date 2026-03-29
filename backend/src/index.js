@@ -116,8 +116,19 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Serve the web frontend
-app.use(express.static(path.resolve(__dirname, "../../web")));
+// Serve the unified Expo web build (fallback to legacy /web if still present)
+const reactWebBuild = path.resolve(__dirname, "../../app/dist");
+// Serve React (Vite) web build as the single UI
+const staticDir = fs.existsSync(reactWebBuild) ? reactWebBuild : null;
+if (!staticDir) {
+  console.warn("React web build not found. Run `cd app && npm run build` before starting the backend.");
+}
+if (staticDir) {
+  app.use(express.static(staticDir));
+  console.log(`Serving static frontend from: ${staticDir}`);
+} else {
+  console.warn("No static frontend found. Build Expo for web to serve desktop experience.");
+}
 
 app.get("/health", (req, res) => {
   sendOk(req, res, { service: "aegisspeak-api", ai: !!process.env.GEMINI_API_KEY }, 200, { domain: "health" });

@@ -92,5 +92,61 @@
     "wearableConnected": false,
     "wearableEncryptedData": null,
     "doctorCode": null
+  },
+  {
+    "id": "f9520a08-2210-44bc-979d-f47090515d08",
+    "anonymousId": "JRN-SNAY",
+    "email": "samir@samir.com",
+    "password": "$2b$10$E81u1UAiZAfTT4x8iRSwIOqK3RpCgS6ATZeHF0bVPGuaH3FIQcGgC",
+    "fullName": "Samir",
+    "role": "patient",
+    "isActive": true,
+    "createdAt": "2026-03-29T03:55:22.546Z",
+    "createdBy": "352e2530-0a03-4e9e-8186-5715a1213e32",
+    "linkedPatientId": null,
+    "doctorType": null,
+    "phone": "",
+    "avatar": "🧑",
+    "consentGiven": true,
+    "consentAt": "2026-03-29T03:55:22.546Z",
+    "subscription": null,
+    "subscriptionStatus": null,
+    "paymentVerified": false,
+    "checkinSchedule": {
+      "hour": 20,
+      "minute": 0,
+      "timezone": "Asia/Kathmandu"
+    },
+    "wearableConnected": false,
+    "wearableEncryptedData": null,
+    "doctorCode": null
+  },
+  {
+    "id": "64638e00-c070-4c44-9da4-53c5c5122a62",
+    "anonymousId": "JRN-MKUY",
+    "email": "terror@terror.com",
+    "password": "$2b$10$A/1NSpXXkb3KVbjc61FKueibeswgQxK1RUlOQh39SZRZLcW5y4pdW",
+    "fullName": "terror",
+    "role": "patient",
+    "isActive": true,
+    "createdAt": "2026-03-29T04:27:32.513Z",
+    "createdBy": "352e2530-0a03-4e9e-8186-5715a1213e32",
+    "linkedPatientId": null,
+    "doctorType": null,
+    "phone": "",
+    "avatar": "🧑",
+    "consentGiven": true,
+    "consentAt": "2026-03-29T04:27:32.513Z",
+    "subscription": null,
+    "subscriptionStatus": null,
+    "paymentVerified": false,
+    "checkinSchedule": {
+      "hour": 20,
+      "minute": 0,
+      "timezone": "Asia/Kathmandu"
+    },
+    "wearableConnected": false,
+    "wearableEncryptedData": null,
+    "doctorCode": null
   }
 ]

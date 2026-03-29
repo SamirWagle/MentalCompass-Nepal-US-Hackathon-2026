@@ -83,16 +83,10 @@ Built for Nepal-US Hackathon 2026:
 
 ## Architecture Overview
 
-### Frontend Mobile
-- React Native + Expo SDK 51
-- TypeScript
-- AsyncStorage and UI token system
-
-### Frontend Web
-- HTML/CSS/Vanilla JS with Inter (Google Fonts) typography
-- Calm mode for lower cognitive load (WHO-aligned)
-- Full mode for advanced analytics and clinician workflows
-- IAM: role-based navigation injection and screen rendering
+### Frontend Web (React)
+- Single-page React UI in `/web`, served by the backend (Node/Express).
+- Calm mode + clinician/admin views in one codebase; role-based navigation.
+- Expo mobile app exists in `/frontend` but is currently not used for web.
 
 ### Backend
 - Node.js + Express (ES modules)
@@ -137,8 +131,8 @@ Nepal-US-Hackathon-2026/
 │           ├── escalationStore.js
 │           ├── journalStore.js     ← Journal CRUD + anonymous reader
 │           └── userStore.js        ← User CRUD + CHV + anonymous IDs
-├── frontend/
-│   └── ... (Expo React Native)
+├── frontend/   (Expo mobile app; web disabled for now)
+│   └── ... (React Native screens, theme)
 ├── scripts/
 │   └── seed_demo.py               ← Python demo data generator
 ├── web/
