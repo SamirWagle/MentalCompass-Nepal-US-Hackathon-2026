@@ -19,6 +19,11 @@ import { ComplianceScreen } from '@screens/ComplianceScreen';
 import { WipeLogScreen } from '@screens/WipeLogScreen';
 import { SettingsScreen } from '@screens/SettingsScreen';
 import { AdminScreen } from '@screens/AdminScreen';
+import { LegacyScreen } from '@screens/LegacyScreen';
+import { CareerScreen } from '@screens/CareerScreen';
+import { SupportScreen } from '@screens/SupportScreen';
+import { VoiceLabScreen } from '@screens/VoiceLabScreen';
+import { ScreeningScreen } from '@screens/ScreeningScreen';
 import './App.css';
 
 function AppContent() {
@@ -32,6 +37,14 @@ function AppContent() {
         return <CopilotScreen />;
       case 'checkin':
         return <CheckinScreen />;
+      case 'career':
+        return <CareerScreen />;
+      case 'support':
+        return <SupportScreen />;
+      case 'voice':
+        return <VoiceLabScreen />;
+      case 'screening':
+        return <ScreeningScreen />;
       case 'insights':
         return <InsightsScreen />;
       case 'signals':
@@ -62,6 +75,8 @@ function AppContent() {
         return <SettingsScreen />;
       case 'admin':
         return <AdminScreen />;
+      case 'legacy':
+        return <LegacyScreen />;
       default:
         return <DashboardScreen />;
     }

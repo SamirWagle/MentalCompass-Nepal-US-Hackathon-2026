@@ -1,7 +1,7 @@
 // Type definitions for AegisSpeak application
 
 export type RiskLevel = "low" | "moderate" | "high";
-export type ScreenKey = "dashboard" | "copilot" | "checkin" | "signals" | "insights" | "clinician" | "privacy" | "milestones" | "vault" | "community" | "wipelog" | "triage" | "alerts" | "compliance" | "journal" | "settings" | "booking" | "admin" | "ccall";
+export type ScreenKey = "dashboard" | "copilot" | "checkin" | "career" | "support" | "voice" | "screening" | "signals" | "insights" | "clinician" | "privacy" | "milestones" | "vault" | "community" | "wipelog" | "triage" | "alerts" | "compliance" | "journal" | "settings" | "booking" | "admin" | "ccall" | "legacy";
 export type LanguageCode = "en" | "ne" | "hi";
 export type Personality = "calm" | "analytical" | "motivational";
 export type UxMode = "calm" | "full";

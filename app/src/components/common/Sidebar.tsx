@@ -20,11 +20,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { screen: 'dashboard', label: 'Home', icon: '◎', section: 'Wellness' },
     { screen: 'copilot', label: 'Talk to AI', icon: '🤖', section: 'Wellness' },
     { screen: 'checkin', label: 'Daily Check-In', icon: '📊', section: 'Wellness' },
+    { screen: 'career', label: 'Career Compass', icon: '🧭', section: 'Wellness' },
+    { screen: 'support', label: 'Early Support', icon: '🤝', section: 'Wellness' },
     { screen: 'journal', label: 'Journal', icon: '📝', section: 'Wellness' },
     { screen: 'milestones', label: 'Milestones', icon: '🏆', section: 'Wellness' },
     { screen: 'vault', label: 'Vault', icon: '📚', section: 'Wellness' },
     { screen: 'community', label: 'Community', icon: '💬', section: 'Wellness' },
     { screen: 'booking', label: 'Book Doctor', icon: '🩺', section: 'Wellness' },
+    { screen: 'voice', label: 'Voice Lab', icon: '🎤', section: 'Advanced', fullOnly: true },
+    { screen: 'screening', label: 'Screening', icon: '📝', section: 'Advanced', fullOnly: true },
     { screen: 'signals', label: 'Voice Signals', icon: '📡', section: 'Advanced', fullOnly: false },
     { screen: 'insights', label: 'Predictive Insights', icon: '🔮', section: 'Advanced', fullOnly: false },
     { screen: 'triage', label: 'Triage', icon: '🚦', section: 'Advanced', fullOnly: true },
@@ -35,6 +39,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { screen: 'settings', label: 'Settings', icon: '⚙️', section: 'System' },
     { screen: 'wipelog', label: 'Wipe Log', icon: '🗑️', section: 'System' },
     { screen: 'admin', label: 'Admin', icon: '🛡️', section: 'System', fullOnly: true },
+    { screen: 'legacy', label: 'Legacy UI', icon: '⏪', section: 'System' },
   ];
 
   const grouped = navItems

@@ -169,7 +169,7 @@
 .button-group {
   display: flex;
   gap: 12px;
-  justifyContent: center;
+  justify-content: center;
 }
 
 .btn {

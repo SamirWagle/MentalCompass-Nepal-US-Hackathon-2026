@@ -118,7 +118,7 @@ app.use((req, _res, next) => {
 
 // Serve the unified Expo web build (fallback to legacy /web if still present)
 const reactWebBuild = path.resolve(__dirname, "../../app/dist");
-// Serve React (Vite) web build as the single UI
+const legacyWeb = path.resolve(__dirname, "../../web");
 const staticDir = fs.existsSync(reactWebBuild) ? reactWebBuild : null;
 if (!staticDir) {
   console.warn("React web build not found. Run `cd app && npm run build` before starting the backend.");
@@ -126,8 +126,10 @@ if (!staticDir) {
 if (staticDir) {
   app.use(express.static(staticDir));
   console.log(`Serving static frontend from: ${staticDir}`);
-} else {
-  console.warn("No static frontend found. Build Expo for web to serve desktop experience.");
+}
+if (fs.existsSync(legacyWeb)) {
+  app.use("/legacy", express.static(legacyWeb));
+  console.log(`Legacy web UI available at /legacy from: ${legacyWeb}`);
 }
 
 app.get("/health", (req, res) => {
