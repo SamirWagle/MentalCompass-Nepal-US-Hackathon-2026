@@ -138,7 +138,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         </View>
 
         {/* Footer */}
-        <Text style={s.footer}>HIPAA · GDPR Compliant · Nepal-US Hackathon 2026</Text>
+        <Text style={s.footer}>Hackathon Prototype · Not compliance audited · Nepal-US Hackathon 2026</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

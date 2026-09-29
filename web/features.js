@@ -311,7 +311,7 @@ function renderWipeLog() {
       ['Raw Audio', 'Purged Immediately', 'var(--success)'],
       ['Voice Biomarkers', '24 hours (edge only)', 'var(--accent)'],
       ['Check-in Scores', '90 days encrypted', 'var(--warning)'],
-      ['Clinical Summaries', '1 year (HIPAA req.)', 'var(--warning)'],
+      ['Clinical Summaries', '1 year (prototype policy)', 'var(--warning)'],
       ['Anonymized Trends', 'Indefinite', 'var(--text-muted)'],
     ];
     policy.innerHTML = items.map(([t, p, c]) =>
@@ -496,11 +496,11 @@ async function renderCompliance() {
 
   const metrics = document.getElementById('compliance-metrics');
   if (metrics) {
-    const hipaaStatus = liveData?.hipaaCompliant !== false ? 100 : 0;
+    const controlsStatus = liveData?.hipaaCompliant !== false ? 100 : 0;
     const phiStripped = liveData?.phiStripped !== false ? 100 : 0;
     const encHealth = 98;
     const data = [
-      { label: 'HIPAA Status', value: hipaaStatus, color: 'var(--success)', text: hipaaStatus + '%' },
+      { label: 'Prototype Controls', value: controlsStatus, color: 'var(--warning)', text: controlsStatus + '%' },
       { label: 'PHI Stripped', value: phiStripped, color: 'var(--accent)', text: phiStripped + '%' },
       { label: 'Encryption Health', value: encHealth, color: 'var(--success)', text: encHealth + '%' },
     ];
@@ -559,7 +559,7 @@ async function renderCompliance() {
       ['Check-in Data', '90 days'],
       ['Clinical Summaries', '365 days'],
       ['Anonymized Aggregates', 'Indefinite'],
-      ['Audit Logs', '7 years (HIPAA)'],
+      ['Audit Logs', '7 years (prototype policy)'],
     ];
     ret.innerHTML = items.map(([t, p]) =>
       `<div class="retention-row"><span class="retention-type">${t}</span><span class="retention-period">${p}</span></div>`
@@ -573,7 +573,7 @@ async function renderCompliance() {
       { time: '10:15 AM', event: 'Audio file destroyed — SHA-256 receipt generated', type: 'purge' },
       { time: '09:30 AM', event: 'TLS certificate validation passed', type: 'cert' },
       { time: '08:00 AM', event: 'Automated key rotation completed', type: 'rotation' },
-      { time: 'Yesterday', event: 'HIPAA compliance audit — all checks passed', type: 'audit' },
+      { time: 'Yesterday', event: 'Prototype data-control review completed', type: 'review' },
       { time: '2 days ago', event: 'Data retention cleanup — 3 records archived', type: 'retention' },
     ];
     audit.innerHTML = events.map(e =>
@@ -744,4 +744,3 @@ document.addEventListener('DOMContentLoaded', initAllFeatures);
 if (document.readyState !== 'loading') {
   initAllFeatures();
 }
-

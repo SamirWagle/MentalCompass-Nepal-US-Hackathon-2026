@@ -192,7 +192,7 @@ export default function ComplianceScreen() {
 
           {/* Compliance note */}
           <View style={s.complianceCard}>
-            <Text style={s.complianceTitle}>✅ HIPAA / Data Compliance Status</Text>
+            <Text style={s.complianceTitle}>Prototype Data-Control Status</Text>
             <View style={s.complianceRow}>
               <Text style={s.complianceKey}>PHI Stripped</Text>
               <Text style={s.complianceVal}>{analytics.phiStripped ? "✅ Yes" : "❌ No"}</Text>
@@ -202,8 +202,8 @@ export default function ComplianceScreen() {
               <Text style={s.complianceVal}>✅ Yes</Text>
             </View>
             <View style={s.complianceRow}>
-              <Text style={s.complianceKey}>Doctor Anonymity</Text>
-              <Text style={s.complianceVal}>✅ Enforced</Text>
+              <Text style={s.complianceKey}>Pseudonymous IDs</Text>
+              <Text style={s.complianceVal}>Prototype control</Text>
             </View>
             <View style={s.complianceRow}>
               <Text style={s.complianceKey}>No Patient Names in API</Text>

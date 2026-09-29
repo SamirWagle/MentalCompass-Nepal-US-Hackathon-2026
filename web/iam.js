@@ -114,7 +114,7 @@ function buildLoginHTML() {
           </div>
           <div class="login-feature-item">
             <span class="login-feature-icon">🔐</span>
-            <span>Zero-Trust Security</span>
+            <span>Privacy-Control Prototype</span>
           </div>
           <div class="login-feature-item">
             <span class="login-feature-icon">📊</span>
@@ -133,7 +133,7 @@ function buildLoginHTML() {
       </div>
 
       <div class="login-footer-info">
-        <span>HIPAA · GDPR Compliant</span>
+        <span>Not compliance audited</span>
         <span>·</span>
         <span>Nepal-US Hackathon 2026</span>
       </div>
@@ -861,7 +861,7 @@ function initDoctorDashboard() {
       { label: 'Encryption Status', value: 'AES-256-GCM Active', color: 'var(--success)' },
       { label: 'Voice Files Stored', value: '0 (purged on edge)', color: 'var(--accent)' },
       { label: 'Last Wipe', value: 'Today · 09:40', color: 'var(--warning)' },
-      { label: 'HIPAA Compliance', value: 'Verified', color: 'var(--success)' },
+      { label: 'Compliance Review', value: 'Not audited', color: 'var(--warning)' },
       { label: 'Audit Hashes', value: '12 receipts', color: 'var(--text-secondary)' },
       { label: 'Anomaly Alerts', value: '0 unresolved', color: 'var(--success)' },
     ];
@@ -2213,7 +2213,7 @@ function buildSettingsScreenHTML() {
         <div class="signal-item"><span class="signal-name">✅ Biometric data AES-256 encrypted</span></div>
         <div class="signal-item"><span class="signal-name">✅ Doctors see anonymous ID only</span></div>
         <div class="signal-item"><span class="signal-name">✅ Raw audio never persists</span></div>
-        <div class="signal-item"><span class="signal-name">✅ HIPAA & GDPR compliant</span></div>
+        <div class="signal-item"><span class="signal-name">⚠️ HIPAA & GDPR assessments not completed</span></div>
       </div>
     </div>
   </div>`;

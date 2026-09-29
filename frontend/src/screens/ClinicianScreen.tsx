@@ -357,7 +357,7 @@ function AppSidebar() {
           </View>
         ))}
       </View>
-      <View style={s.sidebarFooter}><Text style={s.sidebarFooterText}>HIPAA-aligned clinician workspace</Text></View>
+      <View style={s.sidebarFooter}><Text style={s.sidebarFooterText}>Prototype clinician workspace</Text></View>
     </View>
   );
 }
@@ -612,7 +612,7 @@ function ComplianceSecurityMonitor() {
   const rows = [
     ["Encryption Status", "Active", "ShieldCheck", "🔐"],
     ["Voice Files Stored", "0 (None)", "MicOff", "🎤"],
-    ["HIPAA Compliant", "Verified", "CheckCircle2", "✅"],
+    ["Compliance Review", "Not audited", "CircleAlert", "⚠️"],
   ];
 
   return (
