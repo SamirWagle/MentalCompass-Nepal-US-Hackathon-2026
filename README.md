@@ -6,13 +6,16 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue?style=for-the-badge&logo=apple" />
   <img src="https://img.shields.io/badge/AI-Azure%20OpenAI-orange?style=for-the-badge&logo=microsoft-azure" />
-  <img src="https://img.shields.io/badge/Security-HIPAA%20%7C%20GDPR-green?style=for-the-badge&logo=spring-security" />
-  <img src="https://img.shields.io/badge/Architecture-Zero--Trust-critical?style=for-the-badge&logo=cloudflare" />
-  <img src="https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-purple?style=for-the-badge&logo=w3c" />
+  <img src="https://img.shields.io/badge/Status-Hackathon%20Prototype-informational?style=for-the-badge" />
 </p>
 
 **Built for the Nepal-US Hackathon 2026** 🏆  
 *Bridging the gap between mental health stigma and professional care through AI, anonymity, and community.*
+
+> [!IMPORTANT]
+> This is a hackathon prototype, not a medical device or deployed care service. HIPAA,
+> GDPR, WCAG, security, clinical safety, and production readiness have not been
+> independently audited. The product does not diagnose or replace professional care.
 
 </div>
 
@@ -138,19 +141,19 @@ Mental health crises among students and professionals are at an all-time high du
 
 ## 🚀 The Solution: Mental Compass
 
-**Mental Compass** is a journaling-first platform with a secure, **anonymous pipeline** connecting patients, doctors, and Female Community Health Volunteers (FCHVs). 
+**Mental Compass** is a journaling-first prototype exploring a **pseudonymous workflow** connecting patients, doctors, and Female Community Health Volunteers (FCHVs).
 
 1. **Users Journal Freely:** Users log feelings via text, voice, or wearables.
 2. **AI Acts as a Copilot, Not a Doctor:** Our Azure OpenAI agent provides gentle habit suggestions (breathing, CBT reframing, grounding)—*it never diagnoses*.
-3. **True Anonymity:** Doctors review data through proxy IDs (`JRN-XXXX`). They can assess the aggregated data and offer care without ever knowing the patient's real name.
+3. **Pseudonymous Review:** The prototype uses proxy IDs (`JRN-XXXX`) to reduce identity exposure. This is not proof of end-to-end anonymity.
 4. **Community Power:** FCHVs act as "Mini Admins" in low-bandwidth areas, capturing check-ins manually for those without smartphone access.
 
 ---
 
 ## ✨ Why Mental Compass Wins
 
-### 1. 🛡️ The "Zero-Trust" Anonymous Pipeline
-Patients are assigned anonymous IDs (`JRN-XXXX`). Doctors pay a subscription to access the platform. When a doctor reviews a journal, they rate the symptoms and provide notes—while the patient remains 100% anonymous until *they* consent to a consultation.
+### 1. 🛡️ Pseudonymous Care Workflow
+Patients receive proxy IDs (`JRN-XXXX`). The prototype explores role-aware journal review while limiting routine identity exposure. Production use would require threat modelling, access audits, retention policy, encryption review, consent design, and independent compliance assessment.
 
 ### 2. 🧠 Ethical AI (The Anti-Diagnosis Engine)
 Most "AI mental health" apps try to play doctor. Mental Compass uses AI strictly to:
@@ -416,4 +419,3 @@ Mental Compass is built for low-resource, stigma-sensitive contexts:
   <strong>Built for Nepal-US Hackathon 2026</strong><br/>
   <em>Mental health support that is early, private, and actionable.</em>
 </p>
-
